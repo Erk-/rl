@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::hash::Hash;
+use std::ops::{Deref, DerefMut};
 use std::time::Duration;
 use std::thread;
 use ::Holder;
@@ -7,6 +8,37 @@ use ::Holder;
 /// A synchronous instance defining the information for ticket holders, such as
 /// the amount of time between a first ticket request and replenishment and the
 /// number of tickets allocated to holders.
+///
+/// # Examples
+///
+/// Creating a bucket with a one second refresh time, 5 tickets each, and then
+/// taking a ticket from two holders:
+///
+/// ```rust
+/// use hikari::Bucket;
+/// use std::time::Duration;
+///
+/// let mut bucket = Bucket::new(Duration::from_secs(1), 5);
+/// bucket.take(1); // `1` is the ID to take a ticket from
+/// bucket.take(2);
+/// ```
+///
+/// Since `Bucket` implements `Deref` and `DerefMut`, you can treat the bucket
+/// as if it were strictly the internal `HashMap` and perform `HashMap`-y
+/// operations over it:
+///
+/// ```rust
+/// use hikari::Bucket;
+/// use std::time::Duration;
+///
+/// let mut bucket = Bucket::new(Duration::from_secs(1), 1);
+/// bucket.take(1);
+/// bucket.take(2);
+///
+/// bucket.retain(|&k, _| k % 2 == 0); // retain all even holster IDs
+///
+/// assert!(!bucket.contains_key(&1)); // check the bucket doesn't have ID 1
+/// ```
 ///
 /// [`Holder`]: struct.Holder.html
 pub struct Bucket<T: Eq + Hash> {
@@ -277,5 +309,19 @@ impl<T: Eq + Hash> Bucket<T> {
             .entry(holder_id)
             .or_insert_with(Holder::default)
             .take(&self.tickets, &self.refresh_time)
+    }
+}
+
+impl<T: Eq + Hash> Deref for Bucket<T> {
+    type Target = HashMap<T, Holder>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.holders
+    }
+}
+
+impl<T: Eq + Hash> DerefMut for Bucket<T> {
+    fn deref_mut(&mut self) -> &mut HashMap<T, Holder> {
+        &mut self.holders
     }
 }
