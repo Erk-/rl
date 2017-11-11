@@ -271,13 +271,13 @@ impl<T: Eq + Hash> Bucket<T> {
     /// enough time has passed for the holder's tickets to refresh.
     ///
     /// To instead attempt to take a ticket (and failing) and obtain the
-    /// duration that the thread would sleep, use [`take_nonblocking`]. This can
+    /// duration that the thread would sleep, use [`take_nb`]. This can
     /// for example be wrapped in a Future.
     ///
-    /// [`take_nonblocking`]: #method.take_nonblocking
+    /// [`take_nb`]: #method.take_nb
     #[inline]
     pub fn take(&mut self, holder_id: T) {
-        if let Some(duration) = self.take_nonblocking(holder_id) {
+        if let Some(duration) = self.take_nb(holder_id) {
             thread::sleep(duration)
         }
     }
@@ -300,10 +300,10 @@ impl<T: Eq + Hash> Bucket<T> {
     ///
     /// // Assert that the holder's tickets are all used and that there is some
     /// // time until they replenish.
-    /// assert!(bucket.take_nonblocking("test").is_some());
+    /// assert!(bucket.take_nb("test").is_some());
     /// ```
     #[inline]
-    pub fn take_nonblocking(&mut self, holder_id: T) -> Option<Duration> {
+    pub fn take_nb(&mut self, holder_id: T) -> Option<Duration> {
         self
             .holders
             .entry(holder_id)

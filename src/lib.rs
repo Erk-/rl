@@ -43,7 +43,7 @@
 //! // Try to take another ticket in a nonblocking fashion, asserting that the
 //! // current thread _would_ block if we didn't explicitly use a nonblocking
 //! // method.
-//! assert!(bucket.take_nonblocking(id).is_some());
+//! assert!(bucket.take_nb(id).is_some());
 //! ```
 //!
 //! [`Bucket`]: struct.Bucket.html

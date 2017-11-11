@@ -79,10 +79,10 @@ fn test_take() {
 }
 
 #[test]
-fn test_take_nonblocking() {
+fn test_take_nb() {
     let mut bucket = bucket();
-    assert!(bucket.take_nonblocking(1).is_none());
-    assert!(bucket.take_nonblocking(1).is_some());
+    assert!(bucket.take_nb(1).is_none());
+    assert!(bucket.take_nb(1).is_some());
 }
 
 #[test]
@@ -100,7 +100,7 @@ fn test_behaviour_blocking() {
 fn test_nonblocking_duration() {
     let mut bucket = bucket();
     bucket.take(1);
-    let duration = bucket.take_nonblocking(1).expect("holder ticketed?");
+    let duration = bucket.take_nb(1).expect("holder ticketed?");
     assert!(duration < Duration::from_secs(2));
     assert!(duration > Duration::from_secs(1));
 }
