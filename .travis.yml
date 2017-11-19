@@ -13,4 +13,4 @@ cache:
   cargo: true
 
 script:
-- cargo test
+  - cargo test
