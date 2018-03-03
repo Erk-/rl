@@ -1,5 +1,5 @@
 [package]
-authors = ["Zeyla Hellyer <zey@zey.moe>"]
+authors = ["Zeyla Hellyer <zeylahellyer@gmail.com>"]
 description = "A simple yet effective bucket implementation for Rust."
 documentation = "https://docs.rs/hikari"
 homepage = "https://github.com/zeyla/hikari"
@@ -8,3 +8,15 @@ name = "hikari"
 readme = "README.md"
 repository = "https://github.com/zeyla/hikari.git"
 version = "0.1.0"
+
+[dependencies.futures]
+optional = true
+version = "~0.1"
+
+[dependencies.tokio-timer]
+optional = true
+version = "~0.1"
+
+[features]
+default = ["future-support"]
+future-support = ["futures", "tokio-timer"]

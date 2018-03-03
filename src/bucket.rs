@@ -5,6 +5,11 @@ use std::time::Duration;
 use std::thread;
 use ::Holder;
 
+#[cfg(feature = "futures")]
+use futures::future::{self, Future};
+#[cfg(feature = "tokio-timer")]
+use tokio_timer::Timer;
+
 /// A synchronous instance defining the information for ticket holders, such as
 /// the amount of time between a first ticket request and replenishment and the
 /// number of tickets allocated to holders.
@@ -279,6 +284,25 @@ impl<T: Eq + Hash> Bucket<T> {
     pub fn take(&mut self, holder_id: T) {
         if let Some(duration) = self.take_nb(holder_id) {
             thread::sleep(duration)
+        }
+    }
+
+    /// Attempts to take a ticket from a holder.
+    ///
+    /// Returns a leaf future if waiting is not required. Returns a future which
+    /// sleeps if all tickets have been exhausted and have not yet been
+    /// replenished.
+    #[cfg(feature = "futures")]
+    pub fn takef(&mut self, holder_id: T)
+        -> Box<Future<Item = (), Error = ()>> {
+        match self.take_nb(holder_id) {
+            Some(dur) => {
+                let done = Timer::default().sleep(dur)
+                    .map_err(|_| ());
+
+                Box::new(done)
+            },
+            None => Box::new(future::ok(())),
         }
     }
 

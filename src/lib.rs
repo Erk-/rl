@@ -50,6 +50,11 @@
 //! [`Holder`]: struct.Holder.html
 #![deny(missing_docs)]
 
+#[cfg(feature = "futures")]
+extern crate futures;
+#[cfg(feature = "tokio-timer")]
+extern crate tokio_timer;
+
 mod bucket;
 mod holder;
 
