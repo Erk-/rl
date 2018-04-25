@@ -9,6 +9,9 @@ readme = "README.md"
 repository = "https://github.com/zeyla/hikari.git"
 version = "0.1.0"
 
+[badges.maintenance]
+status = "actively-developed"
+
 [dependencies.futures]
 optional = true
 version = "~0.1"
