@@ -293,8 +293,10 @@ impl<T: Eq + Hash> Bucket<T> {
     /// sleeps if all tickets have been exhausted and have not yet been
     /// replenished.
     #[cfg(feature = "futures")]
-    pub fn takef(&mut self, holder_id: T)
-        -> Box<Future<Item = (), Error = ()>> {
+    pub fn takef(
+        &mut self,
+        holder_id: T,
+    ) -> Box<Future<Item = (), Error = ()>> {
         match self.take_nb(holder_id) {
             Some(dur) => {
                 let done = Timer::default().sleep(dur)
@@ -328,8 +330,7 @@ impl<T: Eq + Hash> Bucket<T> {
     /// ```
     #[inline]
     pub fn take_nb(&mut self, holder_id: T) -> Option<Duration> {
-        self
-            .holders
+        self.holders
             .entry(holder_id)
             .or_insert_with(Holder::default)
             .take(&self.tickets, &self.refresh_time)

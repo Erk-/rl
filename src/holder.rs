@@ -70,7 +70,11 @@ impl Holder {
     /// [`Bucket::remaining`]: struct.Bucket.html#method.remaining
     /// [`Holder::tickets_taken`]: #structfield.tickets_taken
     #[inline]
-    pub fn remaining(&mut self, max_tickets: &u32, refresh_time: &Duration) -> u32 {
+    pub fn remaining(
+        &mut self,
+        max_tickets: &u32,
+        refresh_time: &Duration,
+    ) -> u32 {
         self.check_refresh(refresh_time);
 
         max_tickets.saturating_sub(self.tickets_taken)
@@ -108,8 +112,11 @@ impl Holder {
     /// ```
     ///
     /// [`Bucket::take`]: struct.Bucket.html#method.take
-    pub fn take(&mut self, max: &u32, refresh_time: &Duration)
-        -> Option<Duration> {
+    pub fn take(
+        &mut self,
+        max: &u32,
+        refresh_time: &Duration,
+    ) -> Option<Duration> {
         if self.tickets_taken == *max {
             match self.time_remaining(refresh_time) {
                 Some(duration) => Some(duration),
