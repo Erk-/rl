@@ -43,6 +43,7 @@ pub struct Holder {
     /// When this instant - plus the duration of the associated bucket's refresh
     /// time - has passed, this will reset.
     pub started_at: Option<Instant>,
+    _nonexhaustive: (),
 }
 
 impl Holder {

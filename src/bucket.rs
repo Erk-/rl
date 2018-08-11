@@ -70,6 +70,7 @@ pub struct Bucket<T: Eq + Hash> {
     pub refresh_time: Duration,
     /// The maximum number of tickets allotted to each holder.
     pub tickets: u32,
+    _nonexhaustive: (),
 }
 
 impl<T: Eq + Hash> Bucket<T> {
@@ -95,6 +96,7 @@ impl<T: Eq + Hash> Bucket<T> {
             holders: HashMap::new(),
             refresh_time: refresh_time,
             tickets: tickets,
+            _nonexhaustive: (),
         }
     }
 
