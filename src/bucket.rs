@@ -273,6 +273,41 @@ impl<T: Eq + Hash, U: Clone + 'static> Bucket<T, U> {
         self.insert(holder_id, Holder::new(None, 0, state))
     }
 
+    /// Returns an immutable reference to a holder from the holders map by key,
+    /// if one exists.
+    ///
+    /// This is a shortcut for going through the [`holders`] getter and
+    /// then keying that.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use rl::Bucket;
+    /// use std::time::Duration;
+    ///
+    /// let mut bucket = Bucket::new(Duration::from_secs(1), 5);
+    /// bucket.take(&1u64);
+    ///
+    /// assert!(bucket.holder(&&1).is_some());
+    /// ```
+    ///
+    /// [`holders`]: #method.holders
+    #[inline]
+    pub fn holder(&self, holder_id: &T) -> Option<&Holder<U>> {
+        self.holders.get(holder_id)
+    }
+
+    /// Returns a mutable reference to a holder from the holders map by key, if
+    /// one exists.
+    ///
+    /// Refer to [`holder`] for more information.
+    ///
+    /// [`holder`]: #method.holder
+    #[inline]
+    pub fn holder_mut(&mut self, holder_id: &T) -> Option<&mut Holder<U>> {
+        self.holders.get_mut(holder_id)
+    }
+
     /// Whether the bucket contains an instance for the holder.
     ///
     /// # Examples
