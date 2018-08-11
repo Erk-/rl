@@ -11,7 +11,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! hikari = "~0.1"
+//! rl = "~0.1"
 //! ```
 //!
 //! # Examples
@@ -21,7 +21,7 @@
 //! holder, determining if the action would have blocked the thread:
 //!
 //! ```rust
-//! use hikari::Bucket;
+//! use rl::Bucket;
 //! use std::time::Duration;
 //!
 //! // This is simply the identifier used for holder keys.
@@ -52,9 +52,9 @@
 //!
 //! [`Bucket`]: struct.Bucket.html
 //! [`Holder`]: struct.Holder.html
-//! [ci]: https://travis-ci.org/zeyla/hikari.rs
-//! [ci-badge]: https://travis-ci.org/zeyla/hikari.rs.svg?branch=master
-//! [docs]: https://docs.rs/hikari
+//! [ci]: https://travis-ci.org/zeyla/rl.rs
+//! [ci-badge]: https://travis-ci.org/zeyla/rl.rs.svg?branch=master
+//! [docs]: https://docs.rs/rl
 //! [docs-badge]: https://img.shields.io/badge/docs-online-5023dd.svg?style=flat-square
 //! [license]: https://opensource.org/licenses/ISC
 //! [license-badge]: https://img.shields.io/badge/license-ISC-blue.svg?style=flat-square

@@ -20,7 +20,7 @@ use tokio_timer::Timer;
 /// taking a ticket from two holders:
 ///
 /// ```rust
-/// use hikari::Bucket;
+/// use rl::Bucket;
 /// use std::time::Duration;
 ///
 /// let mut bucket = Bucket::new(Duration::from_secs(1), 5);
@@ -71,7 +71,7 @@ impl<T: Eq + Hash> Bucket<T, ()> {
     /// time:
     ///
     /// ```rust
-    /// use hikari::Bucket;
+    /// use rl::Bucket;
     /// use std::time::Duration;
     ///
     /// let mut bucket = Bucket::new(Duration::from_secs(5), 10);
@@ -105,7 +105,7 @@ impl<T: Eq + Hash, U: Clone + 'static> Bucket<T, U> {
     /// time, and a default State that can be later accessed:
     ///
     /// ```rust
-    /// use hikari::Bucket;
+    /// use rl::Bucket;
     /// use std::time::Duration;
     ///
     /// #[derive(Clone)]
@@ -144,7 +144,7 @@ impl<T: Eq + Hash, U: Clone + 'static> Bucket<T, U> {
     /// Insert a default holder for the id `77`:
     ///
     /// ```rust
-    /// use hikari::Bucket;
+    /// use rl::Bucket;
     /// use std::time::Duration;
     ///
     /// let mut bucket = Bucket::new(Duration::from_secs(1), 1);
@@ -169,7 +169,7 @@ impl<T: Eq + Hash, U: Clone + 'static> Bucket<T, U> {
     /// holder until a ticket is taken:
     ///
     /// ```rust
-    /// use hikari::Bucket;
+    /// use rl::Bucket;
     /// use std::time::Duration;
     ///
     /// let mut bucket = Bucket::new(Duration::from_secs(1), 1);
@@ -191,7 +191,7 @@ impl<T: Eq + Hash, U: Clone + 'static> Bucket<T, U> {
     /// # Examples
     ///
     /// ```rust
-    /// use hikari::{Bucket, Holder};
+    /// use rl::{Bucket, Holder};
     /// use std::time::Duration;
     ///
     /// let mut bucket = Bucket::new(Duration::from_secs(5), 1);
@@ -209,7 +209,7 @@ impl<T: Eq + Hash, U: Clone + 'static> Bucket<T, U> {
     /// # Examples
     ///
     /// ```rust
-    /// use hikari::Bucket;
+    /// use rl::Bucket;
     /// use std::time::Duration;
     ///
     /// let id = 77u64;
@@ -243,7 +243,7 @@ impl<T: Eq + Hash, U: Clone + 'static> Bucket<T, U> {
     /// # Examples
     ///
     /// ```rust
-    /// use hikari::Bucket;
+    /// use rl::Bucket;
     /// use std::time::Duration;
     ///
     /// let mut bucket = Bucket::new(Duration::from_secs(1), 5);
@@ -273,7 +273,7 @@ impl<T: Eq + Hash, U: Clone + 'static> Bucket<T, U> {
     /// then decreasing the ticket count to 2:
     ///
     /// ```rust
-    /// use hikari::Bucket;
+    /// use rl::Bucket;
     /// use std::time::Duration;
     ///
     /// let mut bucket = Bucket::new(Duration::from_secs(1), 5);
@@ -299,7 +299,7 @@ impl<T: Eq + Hash, U: Clone + 'static> Bucket<T, U> {
     /// removed:
     ///
     /// ```rust
-    /// use hikari::Bucket;
+    /// use rl::Bucket;
     /// use std::time::Duration;
     ///
     /// let mut bucket = Bucket::new(Duration::from_secs(1), 2);
@@ -356,7 +356,7 @@ impl<T: Eq + Hash, U: Clone + 'static> Bucket<T, U> {
     /// duration to wait is returned:
     ///
     /// ```rust
-    /// use hikari::Bucket;
+    /// use rl::Bucket;
     /// use std::time::Duration;
     ///
     /// let mut bucket = Bucket::new(Duration::from_secs(5), 1);

@@ -12,7 +12,7 @@ use std::time::{Duration, Instant};
 /// Moving a holder from one bucket to another:
 ///
 /// ```rust
-/// use hikari::Bucket;
+/// use rl::Bucket;
 /// use std::time::Duration;
 ///
 /// let mut one = Bucket::new(Duration::from_secs(1), 1);
@@ -78,7 +78,7 @@ impl<T: Clone + 'static> Holder<T> {
     /// # Examples
     ///
     /// ```rust
-    /// use hikari::Holder;
+    /// use rl::Holder;
     /// use std::time::Duration;
     ///
     /// let max = 5u32;
@@ -117,7 +117,7 @@ impl<T: Clone + 'static> Holder<T> {
     /// Create a holder and take a single ticket from it:
     ///
     /// ```rust
-    /// use hikari::Holder;
+    /// use rl::Holder;
     /// use std::time::Duration;
     ///
     /// // Maximum number of tickets allocated to this holder, and the duration

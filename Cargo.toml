@@ -1,12 +1,12 @@
 [package]
 authors = ["Zeyla Hellyer <hi@zeyla.me>"]
-description = "A simple yet effective bucket implementation for Rust."
-documentation = "https://docs.rs/hikari"
-homepage = "https://github.com/zeyla/hikari"
+description = "Simple and effective ratelimiting implementation"
+documentation = "https://docs.rs/rl"
+homepage = "https://github.com/zeyla/rl"
 license = "ISC"
-name = "hikari"
+name = "rl"
 readme = "README.md"
-repository = "https://github.com/zeyla/hikari.git"
+repository = "https://github.com/zeyla/rl.git"
 version = "0.1.0"
 
 [badges.maintenance]

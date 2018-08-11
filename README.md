@@ -1,6 +1,6 @@
 [![ci-badge][]][ci] [![license-badge][]][license] [![docs-badge][]][docs] [![rust badge]][rust link]
 
-# hikari
+# rl
 
 A simple-to-use ratelimit bucket, containing unique holders associated to
 the bucket's settings for use with multiple unique clients.
@@ -13,7 +13,7 @@ Add the following to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
-hikari = "~0.1"
+rl = "~0.1"
 ```
 
 ### Examples
@@ -23,7 +23,7 @@ allotted to each [`Holder`] and _attempt_ to take 3 tickets from a holder,
 determining if the action would have blocked the thread:
 
 ```rust
-use hikari::Bucket;
+use rl::Bucket;
 use std::time::Duration;
 
 // This is simply the identifier used for holder keys.
@@ -56,11 +56,11 @@ assert!(bucket.take_nonblocking(id).is_some());
 
 ISC.
 
-[`Bucket`]: https://docs.rs/hikari/*/hikari/struct.Bucket.html
-[`Holder`]: https://docs.rs/hikari/*/hikari/struct.Holder.html
-[ci]: https://travis-ci.org/zeyla/hikari.rs
-[ci-badge]: https://travis-ci.org/zeyla/hikari.rs.svg?branch=master
-[docs]: https://docs.rs/hikari
+[`Bucket`]: https://docs.rs/rl/*/rl/struct.Bucket.html
+[`Holder`]: https://docs.rs/rl/*/rl/struct.Holder.html
+[ci]: https://travis-ci.org/zeyla/rl.rs
+[ci-badge]: https://travis-ci.org/zeyla/rl.rs.svg?branch=master
+[docs]: https://docs.rs/rl
 [docs-badge]: https://img.shields.io/badge/docs-online-5023dd.svg?style=flat-square
 [license]: https://opensource.org/licenses/ISC
 [license-badge]: https://img.shields.io/badge/license-ISC-blue.svg?style=flat-square
