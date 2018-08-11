@@ -28,23 +28,6 @@ use tokio_timer::Timer;
 /// bucket.take(2);
 /// ```
 ///
-/// Since `Bucket` implements `Deref` and `DerefMut`, you can treat the bucket
-/// as if it were strictly the internal `HashMap` and perform `HashMap`-y
-/// operations over it:
-///
-/// ```rust
-/// use hikari::Bucket;
-/// use std::time::Duration;
-///
-/// let mut bucket = Bucket::new(Duration::from_secs(1), 1);
-/// bucket.take(1);
-/// bucket.take(2);
-///
-/// bucket.retain(|&k, _| k % 2 == 0); // retain all even holster IDs
-///
-/// assert!(!bucket.contains_key(&1)); // check the bucket doesn't have ID 1
-/// ```
-///
 /// [`Holder`]: struct.Holder.html
 pub struct Bucket<T: Eq + Hash> {
     /// Holders are unique identifiers currently holding a ticket to the bucket
