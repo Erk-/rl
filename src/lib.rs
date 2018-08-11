@@ -5,6 +5,8 @@
 //!
 //! # Installation
 //!
+//! This library requires at least Rust 1.15.0.
+//!
 //! Add the following to your `Cargo.toml` file:
 //!
 //! ```toml
@@ -56,8 +58,8 @@
 //! [docs-badge]: https://img.shields.io/badge/docs-online-5023dd.svg?style=flat-square
 //! [license]: https://opensource.org/licenses/ISC
 //! [license-badge]: https://img.shields.io/badge/license-ISC-blue.svg?style=flat-square
-//! [rust badge]: https://img.shields.io/badge/rust-1.21+-93450a.svg?style=flat-square
-//! [rust link]: https://blog.rust-lang.org/2017/10/12/Rust-1.21.html
+//! [rust badge]: https://img.shields.io/badge/rust-1.15+-93450a.svg?style=flat-square
+//! [rust link]: https://blog.rust-lang.org/2017/02/02/Rust-1.15.html
 #![deny(missing_docs)]
 
 #[cfg(feature = "futures")]

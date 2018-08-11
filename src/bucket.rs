@@ -91,10 +91,10 @@ impl<T: Eq + Hash> Bucket<T> {
     /// bucket.take("anything that implements Eq + Hash can be an id");
     /// ```
     pub fn new(refresh_time: Duration, tickets: u32) -> Self {
-        Self {
+        Bucket {
             holders: HashMap::new(),
-            refresh_time,
-            tickets,
+            refresh_time: refresh_time,
+            tickets: tickets,
         }
     }
 
