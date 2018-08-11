@@ -30,7 +30,7 @@ use std::time::{Duration, Instant};
 ///
 /// [`Bucket`]: struct.Bucket.html
 #[derive(Clone, Debug, Default)]
-pub struct Holder {
+pub struct Holder<T: Clone = ()> {
     /// The number of tickets that have been taken from the holder.
     ///
     /// This will refresh when time is up, but only when a ticket is being taken
@@ -43,10 +43,32 @@ pub struct Holder {
     /// When this instant - plus the duration of the associated bucket's refresh
     /// time - has passed, this will reset.
     pub started_at: Option<Instant>,
+    /// User-provided state, if any.
+    ///
+    /// This is available so additional stateful information about this holder
+    /// can be attached and not held in a separate storage location (like a
+    /// `HashMap` that maps to a [`Holder`].
+    ///
+    /// [`Holder`]: struct.Holder.html
+    pub state: T,
     _nonexhaustive: (),
 }
 
-impl Holder {
+impl<T: Clone + 'static> Holder<T> {
+    /// Creates a new holder with no custom state.
+    pub fn new(
+        started_at: Option<Instant>,
+        tickets_taken: u32,
+        state: T,
+    ) -> Holder<T> {
+        Holder {
+            started_at: started_at,
+            state: state,
+            tickets_taken: tickets_taken,
+            _nonexhaustive: (),
+        }
+    }
+
     /// Calculates the number of tickets that are remaining, saturating at the
     /// minimal `u32` bound if [`Holder::tickets_taken`] is greater than the
     /// provided `max_tickets`.
@@ -61,7 +83,7 @@ impl Holder {
     ///
     /// let max = 5u32;
     ///
-    /// let mut holder = Holder::default();
+    /// let mut holder: Holder<()> = Holder::default();
     /// let duration = Duration::from_secs(2);
     /// holder.take(&max, &duration);
     ///
@@ -103,7 +125,7 @@ impl Holder {
     /// let max = 5u32;
     /// let duration = Duration::from_secs(2);
     ///
-    /// let mut holder = Holder::default();
+    /// let mut holder: Holder<()> = Holder::default();
     ///
     /// // Assert that no tickets have been taken.
     /// assert!(holder.tickets_taken == 0);
@@ -179,7 +201,7 @@ mod test {
 
     #[test]
     fn test_remaining() {
-        let mut holder = Holder::default();
+        let mut holder = Holder::new(None, 0, ());
         let duration = Duration::from_secs(1);
         assert_eq!(holder.remaining(&1, &duration), 1);
 
@@ -191,7 +213,7 @@ mod test {
 
     #[test]
     fn test_take() {
-        let mut holder = Holder::default();
+        let mut holder = Holder::new(None, 0, ());
         let duration = Duration::from_secs(1);
         let result = holder.take(&1, &duration);
         assert!(result.is_none());
@@ -201,7 +223,7 @@ mod test {
 
     #[test]
     fn test_behaviour_refresh() {
-        let mut holder = Holder::default();
+        let mut holder = Holder::new(None, 0, ());
         let duration = Duration::from_secs(1);
         holder.take(&1, &duration);
         assert_eq!(holder.remaining(&1, &duration), 0);

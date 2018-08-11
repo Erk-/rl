@@ -29,7 +29,7 @@ use tokio_timer::Timer;
 /// ```
 ///
 /// [`Holder`]: struct.Holder.html
-pub struct Bucket<T: Eq + Hash> {
+pub struct Bucket<T: Eq + Hash, U: Clone = ()> {
     /// Holders are unique identifiers currently holding a ticket to the bucket
     /// instance.
     ///
@@ -43,7 +43,7 @@ pub struct Bucket<T: Eq + Hash> {
     /// # Examples
     ///
     /// [`take`]: #method.take
-    pub holders: HashMap<T, Holder>,
+    pub holders: HashMap<T, Holder<U>>,
     /// The amount of time in milliseconds between the first removal of a ticket
     /// for a holder and when the tickets available to the holder refreshes.
     ///
@@ -53,12 +53,17 @@ pub struct Bucket<T: Eq + Hash> {
     pub refresh_time: Duration,
     /// The maximum number of tickets allotted to each holder.
     pub tickets: u32,
+    state: U,
     _nonexhaustive: (),
 }
 
-impl<T: Eq + Hash> Bucket<T> {
+impl<T: Eq + Hash> Bucket<T, ()> {
     /// Creates a new instance of Bucket with the provided refresh time and
     /// ticket count.
+    ///
+    /// This produces holders with no state. If you need each holder to have
+    /// some set of state (such as attached user data), use
+    /// [`Bucket::stateful`].
     ///
     /// # Examples
     ///
@@ -74,11 +79,57 @@ impl<T: Eq + Hash> Bucket<T> {
     /// // You can now, for example, take tickets from identifying holders.
     /// bucket.take("anything that implements Eq + Hash can be an id");
     /// ```
+    ///
+    /// [`Bucket::stateful`]: #method.stateful
     pub fn new(refresh_time: Duration, tickets: u32) -> Self {
         Bucket {
             holders: HashMap::new(),
             refresh_time: refresh_time,
             tickets: tickets,
+            state: (),
+            _nonexhaustive: (),
+        }
+    }
+}
+
+impl<T: Eq + Hash, U: Clone + 'static> Bucket<T, U> {
+    /// Creates a new instance of Bucket with the provided refresh time, ticket
+    /// count, and a default state for each [`Holder`].
+    ///
+    /// The provided state must implement the `Clone` trait, since new holders
+    /// can be generated from the provided "default" state.
+    ///
+    /// # Examples
+    ///
+    /// Creating a bucket with 10 tickets per holder, with a 5 second refresh
+    /// time, and a default State that can be later accessed:
+    ///
+    /// ```rust
+    /// use hikari::Bucket;
+    /// use std::time::Duration;
+    ///
+    /// #[derive(Clone)]
+    /// struct State {
+    ///     bar: u64,
+    /// }
+    ///
+    /// let mut bucket = Bucket::stateful(Duration::from_secs(5), 10, State {
+    ///     bar: 1,
+    /// });
+    ///
+    /// // Create a holder for a key and then get its state.
+    /// bucket.take("foo");
+    /// let holder = bucket.remove(&"foo").unwrap();
+    /// assert_eq!(holder.state.bar, 1);
+    /// ```
+    ///
+    /// [`Holder`]: struct.Holder.html
+    pub fn stateful(refresh_time: Duration, tickets: u32, state: U) -> Self {
+        Bucket {
+            holders: HashMap::new(),
+            refresh_time: refresh_time,
+            tickets: tickets,
+            state: state,
             _nonexhaustive: (),
         }
     }
@@ -104,8 +155,10 @@ impl<T: Eq + Hash> Bucket<T> {
     ///
     /// [`take`]: #method.take
     #[inline]
-    pub fn generate(&mut self, holder_id: T) -> Option<Holder> {
-        self.insert(holder_id, Holder::default())
+    pub fn generate(&mut self, holder_id: T) -> Option<Holder<U>> {
+        let state = self.state.clone();
+
+        self.insert(holder_id, Holder::new(None, 0, state))
     }
 
     /// Whether the bucket contains an instance for the holder.
@@ -147,7 +200,7 @@ impl<T: Eq + Hash> Bucket<T> {
     /// assert!(bucket.has(&"an id"));
     /// ```
     #[inline]
-    pub fn insert(&mut self, holder_id: T, holder: Holder) -> Option<Holder> {
+    pub fn insert(&mut self, holder_id: T, holder: Holder<U>) -> Option<Holder<U>> {
         self.holders.insert(holder_id, holder)
     }
 
@@ -206,7 +259,7 @@ impl<T: Eq + Hash> Bucket<T> {
     /// assert!(bucket.remove(&"hello").is_none());
     /// ```
     #[inline]
-    pub fn remove(&mut self, holder_id: &T) -> Option<Holder> {
+    pub fn remove(&mut self, holder_id: &T) -> Option<Holder<U>> {
         self.holders.remove(holder_id)
     }
 
@@ -315,9 +368,13 @@ impl<T: Eq + Hash> Bucket<T> {
     /// ```
     #[inline]
     pub fn take_nb(&mut self, holder_id: T) -> Option<Duration> {
+        let state = self.state.clone();
+
         self.holders
             .entry(holder_id)
-            .or_insert_with(Holder::default)
+            .or_insert_with(|| {
+                Holder::new(None, 0, state)
+            })
             .take(&self.tickets, &self.refresh_time)
     }
 }
@@ -441,5 +498,28 @@ mod test {
         let duration = bucket.take_nb(1).expect("holder ticketed?");
         assert!(duration < Duration::from_secs(2));
         assert!(duration > Duration::from_secs(1));
+    }
+
+    #[test]
+    fn test_no_state_holders() {
+        let mut bucket = Bucket::new(Duration::from_secs(1), 2);
+        bucket.take(0u64);
+        let holder = bucket.remove(&0).expect("no holder");
+        assert_eq!(holder.state, ());
+    }
+
+    #[test]
+    fn test_stateful_holders() {
+        #[derive(Clone)]
+        struct State {
+            bar: u64,
+        }
+
+        let mut bucket = Bucket::stateful(Duration::from_secs(1), 2, State {
+            bar: 0,
+        });
+        bucket.take(0u64);
+        let holder = bucket.remove(&0).expect("no holder");
+        assert_eq!(holder.state.bar, 0);
     }
 }
