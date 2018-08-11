@@ -1,5 +1,5 @@
 [package]
-authors = ["Zeyla Hellyer <zeylahellyer@gmail.com>"]
+authors = ["Zeyla Hellyer <hi@zeyla.me>"]
 description = "A simple yet effective bucket implementation for Rust."
 documentation = "https://docs.rs/hikari"
 homepage = "https://github.com/zeyla/hikari"
