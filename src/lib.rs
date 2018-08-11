@@ -1,3 +1,5 @@
+//! [![ci-badge][]][ci] [![license-badge][]][license] [![docs-badge][]][docs] [![rust badge]][rust link]
+//!
 //! A simple-to-use ratelimit bucket, containing unique holders associated to
 //! the bucket's settings for use with multiple unique clients.
 //!
@@ -48,6 +50,14 @@
 //!
 //! [`Bucket`]: struct.Bucket.html
 //! [`Holder`]: struct.Holder.html
+//! [ci]: https://travis-ci.org/zeyla/hikari.rs
+//! [ci-badge]: https://travis-ci.org/zeyla/hikari.rs.svg?branch=master
+//! [docs]: https://docs.rs/hikari
+//! [docs-badge]: https://img.shields.io/badge/docs-online-5023dd.svg?style=flat-square
+//! [license]: https://opensource.org/licenses/ISC
+//! [license-badge]: https://img.shields.io/badge/license-ISC-blue.svg?style=flat-square
+//! [rust badge]: https://img.shields.io/badge/rust-1.21+-93450a.svg?style=flat-square
+//! [rust link]: https://blog.rust-lang.org/2017/10/12/Rust-1.21.html
 #![deny(missing_docs)]
 
 #[cfg(feature = "futures")]
