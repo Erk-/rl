@@ -31,26 +31,9 @@ use std::time::{Duration, Instant};
 /// [`Bucket`]: struct.Bucket.html
 #[derive(Clone, Debug, Default)]
 pub struct Holder<T: Clone = ()> {
-    /// The number of tickets that have been taken from the holder.
-    ///
-    /// This will refresh when time is up, but only when a ticket is being taken
-    /// or the [`refresh`] method is called.
-    ///
-    /// [`refresh`]: #method.refresh
-    pub tickets_taken: u32,
-    /// The time that the current ticket iteration started.
-    ///
-    /// When this instant - plus the duration of the associated bucket's refresh
-    /// time - has passed, this will reset.
-    pub started_at: Option<Instant>,
-    /// User-provided state, if any.
-    ///
-    /// This is available so additional stateful information about this holder
-    /// can be attached and not held in a separate storage location (like a
-    /// `HashMap` that maps to a [`Holder`].
-    ///
-    /// [`Holder`]: struct.Holder.html
-    pub state: T,
+    tickets_taken: u32,
+    started_at: Option<Instant>,
+    state: T,
     _nonexhaustive: (),
 }
 
@@ -67,6 +50,68 @@ impl<T: Clone + 'static> Holder<T> {
             tickets_taken: tickets_taken,
             _nonexhaustive: (),
         }
+    }
+
+    /// Returns an immutable reference to the time that the current ticket
+    /// iteration started.
+    ///
+    /// When this instant - plus the duration of the associated bucket's refresh
+    /// time - has passed, this will reset.
+    pub fn started_at(&self) -> &Option<Instant> {
+        &self.started_at
+    }
+
+    /// Returns a mutable reference to the time that the current ticket
+    /// iteration started.
+    ///
+    /// Refer to [`started_at`] for more information.
+    ///
+    /// [`started_at`]: #method.started_at
+    pub fn started_at_mut(&mut self) -> &mut Option<Instant> {
+        &mut self.started_at
+    }
+
+    /// Returns an immutable reference to the user-provided default holder
+    /// state, if any.
+    ///
+    /// This is available so additional stateful information about each holder
+    /// can be attached and not held in a separate storage location (like a
+    /// `HashMap` that maps to a [`Holder`]).
+    ///
+    /// [`Holder`]: struct.Holder.html
+    pub fn state(&self) -> &T {
+        &self.state
+    }
+
+    /// Returns a mutable reference to the user-provided default holder state,
+    /// if any.
+    ///
+    /// Refer to [`state`] for more information.
+    ///
+    /// [`state`]: #method.state
+    pub fn state_mut(&mut self) -> &mut T {
+        &mut self.state
+    }
+
+    /// Returns an immutable reference to the number of tickets that have been
+    /// taken from the holder.
+    ///
+    /// This will refresh when time is up, but only when a ticket is being taken
+    /// or the [`refresh`] method is called.
+    ///
+    /// [`refresh`]: #method.refresh
+    pub fn tickets_taken(&self) -> &u32 {
+        &self.tickets_taken
+    }
+
+    /// Returns a mutable reference to the number of tickets that have been
+    /// taken from the holder.
+    ///
+    /// Refer to [`tickets_taken`] for more information.
+    ///
+    /// [`tickets_taken`]: #method.tickets_taken
+    pub fn tickets_taken_mut(&mut self) -> &mut u32 {
+        &mut self.tickets_taken
     }
 
     /// Calculates the number of tickets that are remaining, saturating at the
@@ -128,10 +173,10 @@ impl<T: Clone + 'static> Holder<T> {
     /// let mut holder: Holder<()> = Holder::default();
     ///
     /// // Assert that no tickets have been taken.
-    /// assert!(holder.tickets_taken == 0);
+    /// assert!(*holder.tickets_taken() == 0);
     ///
     /// holder.take(&max, &duration);
-    /// assert!(holder.tickets_taken == 1);
+    /// assert!(*holder.tickets_taken() == 1);
     /// ```
     ///
     /// [`Bucket::take`]: struct.Bucket.html#method.take

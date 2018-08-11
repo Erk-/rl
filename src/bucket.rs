@@ -43,16 +43,16 @@ pub struct Bucket<T: Eq + Hash, U: Clone = ()> {
     /// # Examples
     ///
     /// [`take`]: #method.take
-    pub holders: HashMap<T, Holder<U>>,
+    holders: HashMap<T, Holder<U>>,
     /// The amount of time in milliseconds between the first removal of a ticket
     /// for a holder and when the tickets available to the holder refreshes.
     ///
     /// **Note**: Due to the synchronous nature of this bucket, the value of the
     /// number of used tickets may not be accurate and will not automatically
     /// replenish in the future.
-    pub refresh_time: Duration,
+    refresh_time: Duration,
     /// The maximum number of tickets allotted to each holder.
-    pub tickets: u32,
+    tickets: u32,
     state: U,
     _nonexhaustive: (),
 }
@@ -120,7 +120,7 @@ impl<T: Eq + Hash, U: Clone + 'static> Bucket<T, U> {
     /// // Create a holder for a key and then get its state.
     /// bucket.take("foo");
     /// let holder = bucket.remove(&"foo").unwrap();
-    /// assert_eq!(holder.state.bar, 1);
+    /// assert_eq!(holder.state().bar, 1);
     /// ```
     ///
     /// [`Holder`]: struct.Holder.html
@@ -132,6 +132,118 @@ impl<T: Eq + Hash, U: Clone + 'static> Bucket<T, U> {
             state: state,
             _nonexhaustive: (),
         }
+    }
+
+    /// Returns an immutable reference to the inner holders.
+    ///
+    /// Holders are unique identifiers currently holding a ticket to the bucket
+    /// instance.
+    ///
+    /// You _should not_ directly mutate this state and instead call methods to
+    /// mutate it for you, but the option is there if you know what you're
+    /// doing.
+    ///
+    /// **Note**: You should not access this map directly to take tickets, you
+    /// should go through the [`take`] method.
+    ///
+    /// # Examples
+    ///
+    /// [`take`]: #method.take
+    pub fn holders(&self) -> &HashMap<T, Holder<U>> {
+        &self.holders
+    }
+
+    /// Returns a mutable reference to the inner holders.
+    ///
+    /// Refer to [`holders_mut`] for more information.
+    ///
+    /// [`holders_mut`]: #method.holders_mut
+    pub fn holders_mut(&mut self) -> &mut HashMap<T, Holder<U>> {
+        &mut self.holders
+    }
+
+    /// Returns an immutable reference to the refresh time.
+    ///
+    /// This is the amount of time in milliseconds between the first removal of
+    /// a ticket for a holder and when the tickets available to the holder
+    /// refreshes.
+    ///
+    /// **Note**: Due to the synchronous nature of this bucket, the value of the
+    /// number of used tickets may not be accurate and will not automatically
+    /// replenish in the future.
+    pub fn refresh_time(&self) -> &Duration {
+        &self.refresh_time
+    }
+
+    /// Returns a mutable reference to the refresh time.
+    ///
+    /// Refer to [`refresh_time`] for more information.
+    ///
+    /// [`refresh_time`]: #method.refresh_time
+    pub fn refresh_time_mut(&mut self) -> &mut Duration {
+        &mut self.refresh_time
+    }
+
+    /// Returns an immutable reference to the user-provided default state of
+    /// each created holder.
+    pub fn state(&self) -> &U {
+        &self.state
+    }
+
+    /// Returns a mutable reference to the user-provided default state of each
+    /// each created holder.
+    ///
+    /// Refer to [`state`] for more information.
+    ///
+    /// # Examples
+    ///
+    /// Modify the default state of newly created holders after creating the
+    /// Bucket instance and an initial holder:
+    ///
+    /// ```rust
+    /// use rl::Bucket;
+    /// use std::time::Duration;
+    ///
+    /// #[derive(Clone)]
+    /// struct State {
+    ///     number: u64,
+    /// }
+    ///
+    /// let mut bucket = Bucket::stateful(Duration::from_secs(1), 2, State {
+    ///     number: 1,
+    /// });
+    ///
+    /// // Take a ticket from ID 1.
+    /// bucket.take(&1u64);
+    ///
+    /// // Retrieve the Holder instance for the ticket and assert that the state
+    /// // of the holder has a `number` of 1
+    /// assert_eq!(bucket.holders()[&1].state().number, 1);
+    ///
+    /// // Now change the default state to have a number of 10:
+    /// bucket.state_mut().number = 10;
+    ///
+    /// // Create a new Holder with ID 2 and assert that the state of the holder
+    /// // has a number of 10
+    /// bucket.take(&2);
+    /// assert_eq!(bucket.holders()[&2].state().number, 10);
+    /// ```
+    ///
+    /// [`state`]: #method.state
+    pub fn state_mut(&mut self) -> &mut U {
+        &mut self.state
+    }
+
+    /// Returns an immutable reference to the maximum number of tickets allotted
+    /// to each holder.
+    pub fn tickets(&self) -> &u32 {
+        &self.tickets
+    }
+
+    /// Returns a mmutable reference to the maximum number of tickets allotted
+    /// to each holder.
+    pub fn tickets_mut(&mut self) -> &mut u32 {
+        &mut self.tickets
     }
 
     /// Inserts a default holder for an ID, returning the existing holder if one
@@ -432,7 +544,7 @@ mod test {
         bucket.take(1);
 
         let value = bucket.insert(1, Holder::default());
-        assert_eq!(value.unwrap().tickets_taken, 1);
+        assert_eq!(*value.unwrap().tickets_taken(), 1);
     }
 
     #[test]
@@ -505,7 +617,7 @@ mod test {
         let mut bucket = Bucket::new(Duration::from_secs(1), 2);
         bucket.take(0u64);
         let holder = bucket.remove(&0).expect("no holder");
-        assert_eq!(holder.state, ());
+        assert_eq!(*holder.state(), ());
     }
 
     #[test]
@@ -520,6 +632,6 @@ mod test {
         });
         bucket.take(0u64);
         let holder = bucket.remove(&0).expect("no holder");
-        assert_eq!(holder.state.bar, 0);
+        assert_eq!(holder.state().bar, 0);
     }
 }
