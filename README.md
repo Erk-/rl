@@ -58,8 +58,8 @@ ISC.
 
 [`Bucket`]: https://docs.rs/rl/*/rl/struct.Bucket.html
 [`Holder`]: https://docs.rs/rl/*/rl/struct.Holder.html
-[ci]: https://travis-ci.org/zeyla/rl.rs
-[ci-badge]: https://travis-ci.org/zeyla/rl.rs.svg?branch=master
+[ci]: https://travis-ci.org/zeyla/rl
+[ci-badge]: https://img.shields.io/travis/zeyla/rl.svg?style=flat-square
 [docs]: https://docs.rs/rl
 [docs-badge]: https://img.shields.io/badge/docs-online-5023dd.svg?style=flat-square
 [license]: https://opensource.org/licenses/ISC
