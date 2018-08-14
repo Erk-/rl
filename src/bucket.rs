@@ -209,24 +209,29 @@ impl<T: Eq + Hash, U: Clone + 'static> Bucket<T, U> {
     ///     number: u64,
     /// }
     ///
+    /// let id = 1u64;
+    /// let second_id = 2u64;
+    ///
     /// let mut bucket = Bucket::stateful(Duration::from_secs(1), 2, State {
     ///     number: 1,
     /// });
     ///
     /// // Take a ticket from ID 1.
-    /// bucket.take(&1u64);
+    /// {
+    ///     bucket.take(&id);
+    /// }
     ///
     /// // Retrieve the Holder instance for the ticket and assert that the state
     /// // of the holder has a `number` of 1
-    /// assert_eq!(bucket.holders()[&1].state().number, 1);
+    /// assert_eq!(bucket.holders()[&id].state().number, 1);
     ///
     /// // Now change the default state to have a number of 10:
     /// bucket.state_mut().number = 10;
     ///
     /// // Create a new Holder with ID 2 and assert that the state of the holder
     /// // has a number of 10
-    /// bucket.take(&2);
-    /// assert_eq!(bucket.holders()[&2].state().number, 10);
+    /// bucket.take(&second_id);
+    /// assert_eq!(bucket.holders()[&second_id].state().number, 10);
     /// ```
     ///
     /// [`state`]: #method.state
@@ -285,10 +290,12 @@ impl<T: Eq + Hash, U: Clone + 'static> Bucket<T, U> {
     /// use rl::Bucket;
     /// use std::time::Duration;
     ///
-    /// let mut bucket = Bucket::new(Duration::from_secs(1), 5);
-    /// bucket.take(&1u64);
+    /// let id = 1u64;
     ///
-    /// assert!(bucket.holder(&&1).is_some());
+    /// let mut bucket = Bucket::new(Duration::from_secs(1), 5);
+    /// bucket.take(&id);
+    ///
+    /// assert!(bucket.holder(&&id).is_some());
     /// ```
     ///
     /// [`holders`]: #method.holders
