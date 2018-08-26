@@ -18,14 +18,14 @@ use std::time::{Duration, Instant};
 /// let mut one = Bucket::new(Duration::from_secs(1), 1);
 /// let mut two = Bucket::new(Duration::from_secs(2), 1);
 ///
-/// one.generate("an id");
+/// one.generate("an id").unwrap();
 ///
-/// if let Some(holder) = one.remove(&"an id") {
-///     two.insert("an id", holder);
+/// if let Ok(Some(holder)) = one.remove(&"an id") {
+///     two.insert("an id", holder).unwrap();
 /// }
 ///
-/// assert!(!one.has(&"an id"));
-/// assert!(two.has(&"an id"));
+/// assert!(!one.has(&"an id").unwrap());
+/// assert!(two.has(&"an id").unwrap());
 /// ```
 ///
 /// [`Bucket`]: struct.Bucket.html
@@ -115,7 +115,7 @@ impl<T: Clone + 'static> Holder<T> {
     }
 
     /// Calculates the number of tickets that are remaining, saturating at the
-    /// minimal `u32` bound if [`Holder::tickets_taken`] is greater than the
+    /// minimal `u64` bound if [`Holder::tickets_taken`] is greater than the
     /// provided `max_tickets`.
     ///
     /// Typically, you should be calling [`Bucket::remaining`].
@@ -130,9 +130,9 @@ impl<T: Clone + 'static> Holder<T> {
     ///
     /// let mut holder: Holder<()> = Holder::default();
     /// let duration = Duration::from_secs(2);
-    /// holder.take(&max, &duration);
+    /// holder.take(max, &duration);
     ///
-    /// assert!(holder.remaining(&max, &duration) == 4);
+    /// assert!(holder.remaining(max, &duration) == 4);
     /// ```
     ///
     /// [`Bucket::remaining`]: struct.Bucket.html#method.remaining
@@ -140,7 +140,7 @@ impl<T: Clone + 'static> Holder<T> {
     #[inline]
     pub fn remaining(
         &mut self,
-        max_tickets: &u32,
+        max_tickets: u32,
         refresh_time: &Duration,
     ) -> u32 {
         self.check_refresh(refresh_time);
@@ -175,17 +175,17 @@ impl<T: Clone + 'static> Holder<T> {
     /// // Assert that no tickets have been taken.
     /// assert!(*holder.tickets_taken() == 0);
     ///
-    /// holder.take(&max, &duration);
+    /// holder.take(max, &duration);
     /// assert!(*holder.tickets_taken() == 1);
     /// ```
     ///
     /// [`Bucket::take`]: struct.Bucket.html#method.take
     pub fn take(
         &mut self,
-        max: &u32,
+        max: u32,
         refresh_time: &Duration,
     ) -> Option<Duration> {
-        if self.tickets_taken == *max {
+        if self.tickets_taken == max {
             match self.time_remaining(refresh_time) {
                 Some(duration) => Some(duration),
                 None => {
@@ -242,37 +242,26 @@ impl<T: Clone + 'static> Holder<T> {
 mod test {
     use super::Holder;
     use std::time::Duration;
-    use std::thread;
 
     #[test]
     fn test_remaining() {
         let mut holder = Holder::new(None, 0, ());
         let duration = Duration::from_secs(1);
-        assert_eq!(holder.remaining(&1, &duration), 1);
+        assert_eq!(holder.remaining(1u32, &duration), 1);
 
-        holder.take(&1, &duration);
-        assert_eq!(holder.remaining(&1, &duration), 0);
-        holder.take(&1, &duration);
-        assert_eq!(holder.remaining(&1, &duration), 0);
+        holder.take(1, &duration);
+        assert_eq!(holder.remaining(1, &duration), 0);
+        holder.take(1, &duration);
+        assert_eq!(holder.remaining(1, &duration), 0);
     }
 
     #[test]
     fn test_take() {
         let mut holder = Holder::new(None, 0, ());
         let duration = Duration::from_secs(1);
-        let result = holder.take(&1, &duration);
+        let result = holder.take(1u32, &duration);
         assert!(result.is_none());
-        let result = holder.take(&1, &duration).expect("holder tickets not maxed");
+        let result = holder.take(1, &duration).expect("holder tickets not maxed");
         assert!(result <= Duration::from_secs(1));
-    }
-
-    #[test]
-    fn test_behaviour_refresh() {
-        let mut holder = Holder::new(None, 0, ());
-        let duration = Duration::from_secs(1);
-        holder.take(&1, &duration);
-        assert_eq!(holder.remaining(&1, &duration), 0);
-        thread::sleep(holder.take(&1, &duration).unwrap());
-        assert_eq!(holder.remaining(&1, &duration), 1);
     }
 }

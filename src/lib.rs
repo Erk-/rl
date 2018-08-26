@@ -16,11 +16,18 @@
 //!
 //! # Examples
 //!
-//! Create a new [`Bucket`] with a refresh time of 1000 milliseconds and 2
-//! tickets allotted to each [`Holder`] and _attempt_ to take 3 tickets from a
-//! holder, determining if the action would have blocked the thread:
+//! Using the default in-memory backend, create a new [`Bucket`] with a refresh
+//! time of 1000 milliseconds and 2 tickets allotted to each [`Holder`] and
+//! _attempt_ to take 3 tickets from a holder, determining if the action would
+//! have blocked the thread:
 //!
 //! ```rust
+//! # extern crate rl;
+//! #
+//! # use std::error::Error;
+//! #
+//! # fn try_main() -> Result<(), Box<Error>> {
+//! #
 //! use rl::Bucket;
 //! use std::time::Duration;
 //!
@@ -31,23 +38,29 @@
 //!
 //! // At this point, the bucket does not contain a holder for the ID, so
 //! // attempting to retrieve the remaining amount will return None:
-//! assert!(bucket.remaining(&id).is_none());
+//! assert!(bucket.remaining(&id)?.is_none());
 //!
 //! // First, take a single ticket. This will create the holder due to it not
 //! // existing, and then take a ticket. Since the limit is 2, the holder now
 //! // has 1 ticket remaining.
 //! bucket.take(id);
-//! assert!(bucket.remaining(&id) == Some(1));
+//! assert!(bucket.remaining(&id)? == Some(1));
 //!
 //! // Take another, leaving it with 0 since 1000ms has not passed yet and the
 //! // holder would not replenish yet.
 //! bucket.take(id);
-//! assert!(bucket.remaining(&id) == Some(0));
+//! assert!(bucket.remaining(&id)? == Some(0));
 //!
 //! // Try to take another ticket in a nonblocking fashion, asserting that the
 //! // current thread _would_ block if we didn't explicitly use a nonblocking
 //! // method.
-//! assert!(bucket.take_nb(id).is_some());
+//! assert!(bucket.take_nb(id)?.is_some());
+//! #     Ok(())
+//! # }
+//! #
+//! # fn main() {
+//! #     try_main().unwrap();
+//! # }
 //! ```
 //!
 //! [`Bucket`]: struct.Bucket.html
@@ -60,12 +73,15 @@
 //! [license-badge]: https://img.shields.io/badge/license-ISC-blue.svg?style=flat-square
 //! [rust badge]: https://img.shields.io/badge/rust-1.15+-93450a.svg?style=flat-square
 //! [rust link]: https://blog.rust-lang.org/2017/02/02/Rust-1.15.html
+#![cfg_attr(feature = "cargo-clippy", allow(redundant_field_names))]
 #![deny(missing_docs)]
 
 #[cfg(feature = "futures")]
 extern crate futures;
 #[cfg(feature = "tokio-timer")]
 extern crate tokio_timer;
+
+pub mod backend;
 
 mod bucket;
 mod holder;

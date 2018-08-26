@@ -1,9 +1,10 @@
-use std::collections::HashMap;
+use backend::{Backend, InMemoryBackend};
 use std::hash::Hash;
+use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 use std::time::Duration;
 use std::thread;
-use ::Holder;
+use Holder;
 
 #[cfg(feature = "futures")]
 use futures::future::{self, Future};
@@ -20,44 +21,36 @@ use tokio_timer::Timer;
 /// taking a ticket from two holders:
 ///
 /// ```rust
+/// # extern crate rl;
+/// #
+/// # use std::error::Error;
+/// #
+/// # fn try_main() -> Result<(), Box<Error>> {
+/// #
 /// use rl::Bucket;
 /// use std::time::Duration;
 ///
 /// let mut bucket = Bucket::new(Duration::from_secs(1), 5);
-/// bucket.take(1); // `1` is the ID to take a ticket from
-/// bucket.take(2);
+/// bucket.take(1)?; // `1` is the ID to take a ticket from
+/// bucket.take(2)?;
+/// #
+/// #     Ok(())
+/// # }
+/// #
+/// # fn main() {
+/// #     try_main().unwrap();
+/// # }
 /// ```
 ///
 /// [`Holder`]: struct.Holder.html
-pub struct Bucket<T: Eq + Hash, U: Clone = ()> {
-    /// Holders are unique identifiers currently holding a ticket to the bucket
-    /// instance.
-    ///
-    /// You _should not_ directly mutate this state and instead call methods to
-    /// mutate it for you, but the option is there if you know what you're
-    /// doing.
-    ///
-    /// **Note**: You should not access this map directly to take tickets, you
-    /// should go through the [`take`] method.
-    ///
-    /// # Examples
-    ///
-    /// [`take`]: #method.take
-    holders: HashMap<T, Holder<U>>,
-    /// The amount of time in milliseconds between the first removal of a ticket
-    /// for a holder and when the tickets available to the holder refreshes.
-    ///
-    /// **Note**: Due to the synchronous nature of this bucket, the value of the
-    /// number of used tickets may not be accurate and will not automatically
-    /// replenish in the future.
-    refresh_time: Duration,
-    /// The maximum number of tickets allotted to each holder.
-    tickets: u32,
+pub struct Bucket<T: Eq + Hash, U: Clone + 'static, V: Backend<T, U>> {
+    backend: V,
     state: U,
+    marker: PhantomData<T>,
     _nonexhaustive: (),
 }
 
-impl<T: Eq + Hash> Bucket<T, ()> {
+impl<T: Eq + Hash + 'static> Bucket<T, (), InMemoryBackend<T, ()>> {
     /// Creates a new instance of Bucket with the provided refresh time and
     /// ticket count.
     ///
@@ -71,28 +64,40 @@ impl<T: Eq + Hash> Bucket<T, ()> {
     /// time:
     ///
     /// ```rust
+    /// # extern crate rl;
+    /// #
+    /// # use std::error::Error;
+    /// #
+    /// # fn try_main() -> Result<(), Box<Error>> {
+    /// #
     /// use rl::Bucket;
     /// use std::time::Duration;
     ///
     /// let mut bucket = Bucket::new(Duration::from_secs(5), 10);
     ///
     /// // You can now, for example, take tickets from identifying holders.
-    /// bucket.take("anything that implements Eq + Hash can be an id");
+    /// bucket.take("anything that implements Eq + Hash can be an id")?;
+    /// #
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     try_main().unwrap();
+    /// # }
     /// ```
     ///
     /// [`Bucket::stateful`]: #method.stateful
     pub fn new(refresh_time: Duration, tickets: u32) -> Self {
         Bucket {
-            holders: HashMap::new(),
-            refresh_time: refresh_time,
-            tickets: tickets,
+            backend: InMemoryBackend::new(refresh_time, tickets),
+            marker: PhantomData,
             state: (),
             _nonexhaustive: (),
         }
     }
 }
 
-impl<T: Eq + Hash, U: Clone + 'static> Bucket<T, U> {
+impl<T: Eq + Hash, U: Clone + 'static, V: Backend<T, U>> Bucket<T, U, V> {
     /// Creates a new instance of Bucket with the provided refresh time, ticket
     /// count, and a default state for each [`Holder`].
     ///
@@ -105,6 +110,13 @@ impl<T: Eq + Hash, U: Clone + 'static> Bucket<T, U> {
     /// time, and a default State that can be later accessed:
     ///
     /// ```rust
+    /// # extern crate rl;
+    /// #
+    /// # use std::error::Error;
+    /// #
+    /// # fn try_main() -> Result<(), Box<Error>> {
+    /// #
+    /// use rl::backend::InMemoryBackend;
     /// use rl::Bucket;
     /// use std::time::Duration;
     ///
@@ -113,56 +125,35 @@ impl<T: Eq + Hash, U: Clone + 'static> Bucket<T, U> {
     ///     bar: u64,
     /// }
     ///
-    /// let mut bucket = Bucket::stateful(Duration::from_secs(5), 10, State {
+    /// let backend = InMemoryBackend::new(Duration::from_secs(5), 10);
+    /// let mut bucket = Bucket::stateful(backend, State {
     ///     bar: 1,
     /// });
     ///
     /// // Create a holder for a key and then get its state.
-    /// bucket.take("foo");
-    /// let holder = bucket.remove(&"foo").unwrap();
+    /// bucket.take("foo")?;
+    /// let holder = bucket.remove(&"foo")?.unwrap();
     /// assert_eq!(holder.state().bar, 1);
+    /// #
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     try_main().unwrap();
+    /// # }
     /// ```
     ///
     /// [`Holder`]: struct.Holder.html
-    pub fn stateful(refresh_time: Duration, tickets: u32, state: U) -> Self {
+    pub fn stateful(backend: V, state: U) -> Self {
         Bucket {
-            holders: HashMap::new(),
-            refresh_time: refresh_time,
-            tickets: tickets,
+            backend: backend,
+            marker: PhantomData,
             state: state,
             _nonexhaustive: (),
         }
     }
 
-    /// Returns an immutable reference to the inner holders.
-    ///
-    /// Holders are unique identifiers currently holding a ticket to the bucket
-    /// instance.
-    ///
-    /// You _should not_ directly mutate this state and instead call methods to
-    /// mutate it for you, but the option is there if you know what you're
-    /// doing.
-    ///
-    /// **Note**: You should not access this map directly to take tickets, you
-    /// should go through the [`take`] method.
-    ///
-    /// # Examples
-    ///
-    /// [`take`]: #method.take
-    pub fn holders(&self) -> &HashMap<T, Holder<U>> {
-        &self.holders
-    }
-
-    /// Returns a mutable reference to the inner holders.
-    ///
-    /// Refer to [`holders_mut`] for more information.
-    ///
-    /// [`holders_mut`]: #method.holders_mut
-    pub fn holders_mut(&mut self) -> &mut HashMap<T, Holder<U>> {
-        &mut self.holders
-    }
-
-    /// Returns an immutable reference to the refresh time.
+    /// Returns the amount of time between holder refreshes.
     ///
     /// This is the amount of time in milliseconds between the first removal of
     /// a ticket for a holder and when the tickets available to the holder
@@ -171,17 +162,60 @@ impl<T: Eq + Hash, U: Clone + 'static> Bucket<T, U> {
     /// **Note**: Due to the synchronous nature of this bucket, the value of the
     /// number of used tickets may not be accurate and will not automatically
     /// replenish in the future.
-    pub fn refresh_time(&self) -> &Duration {
-        &self.refresh_time
+    ///
+    /// # Examples
+    ///
+    /// Retrieve the refresh time that the backend has configured:
+    ///
+    /// ```rust
+    /// # extern crate rl;
+    /// #
+    /// # use std::error::Error;
+    /// #
+    /// # fn try_main() -> Result<(), Box<Error>> {
+    /// #
+    /// use rl::Bucket;
+    /// use std::time::Duration;
+    ///
+    /// let refresh_time = Duration::from_secs(2);
+    /// let mut bucket: Bucket<i32, _, _> = Bucket::new(refresh_time, 1);
+    ///
+    /// assert_eq!(bucket.refresh_time()?, Some(refresh_time));
+    /// #
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     try_main().unwrap();
+    /// # }
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// Refer to the documentation for the `refresh_time` method of the backend
+    /// implementation in use for why this can error.
+    #[cfg_attr(feature = "futures", cold)]
+    pub fn refresh_time(&mut self) -> Result<Option<Duration>, V::Error> {
+        self.backend.refresh_time()
     }
 
-    /// Returns a mutable reference to the refresh time.
+    /// Returns a Future which resolves to the amount of time between holder
+    /// refreshes.
     ///
     /// Refer to [`refresh_time`] for more information.
     ///
+    /// # Errors
+    ///
+    /// Refer to the documentation for the `refresh_timef` method of the backend
+    /// implementation in use for why this can error.
+    ///
     /// [`refresh_time`]: #method.refresh_time
-    pub fn refresh_time_mut(&mut self) -> &mut Duration {
-        &mut self.refresh_time
+    #[cfg(feature = "futures")]
+    #[inline]
+    pub fn refresh_timef(
+        &mut self,
+    ) -> Box<Future<Item = Option<Duration>, Error = V::Error>> {
+        self.backend.refresh_timef()
     }
 
     /// Returns an immutable reference to the user-provided default state of
@@ -201,6 +235,13 @@ impl<T: Eq + Hash, U: Clone + 'static> Bucket<T, U> {
     /// Bucket instance and an initial holder:
     ///
     /// ```rust
+    /// # extern crate rl;
+    /// #
+    /// # use std::error::Error;
+    /// #
+    /// # fn try_main() -> Result<(), Box<Error>> {
+    /// #
+    /// use rl::backend::InMemoryBackend;
     /// use rl::Bucket;
     /// use std::time::Duration;
     ///
@@ -212,13 +253,14 @@ impl<T: Eq + Hash, U: Clone + 'static> Bucket<T, U> {
     /// let id = 1u64;
     /// let second_id = 2u64;
     ///
-    /// let mut bucket = Bucket::stateful(Duration::from_secs(1), 2, State {
+    /// let backend = InMemoryBackend::new(Duration::from_secs(1), 2);
+    /// let mut bucket = Bucket::stateful(backend, State {
     ///     number: 1,
     /// });
     ///
     /// // Take a ticket from ID 1.
     /// {
-    ///     bucket.take(&id);
+    ///     bucket.take(&id)?;
     /// }
     ///
     /// // Retrieve the Holder instance for the ticket and assert that the state
@@ -230,8 +272,15 @@ impl<T: Eq + Hash, U: Clone + 'static> Bucket<T, U> {
     ///
     /// // Create a new Holder with ID 2 and assert that the state of the holder
     /// // has a number of 10
-    /// bucket.take(&second_id);
+    /// bucket.take(&second_id)?;
     /// assert_eq!(bucket.holders()[&second_id].state().number, 10);
+    /// #
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     try_main().unwrap();
+    /// # }
     /// ```
     ///
     /// [`state`]: #method.state
@@ -241,18 +290,33 @@ impl<T: Eq + Hash, U: Clone + 'static> Bucket<T, U> {
 
     /// Returns an immutable reference to the maximum number of tickets allotted
     /// to each holder.
-    pub fn tickets(&self) -> &u32 {
-        &self.tickets
+    #[cfg_attr(feature = "futures", cold)]
+    #[inline]
+    pub fn tickets(&mut self) -> Result<Option<u32>, V::Error> {
+        self.backend.tickets()
     }
 
-    /// Returns a mmutable reference to the maximum number of tickets allotted
-    /// to each holder.
-    pub fn tickets_mut(&mut self) -> &mut u32 {
-        &mut self.tickets
+    /// Returns a Future which resolves to the maximum number of tickets
+    /// allotted to each holder.
+    ///
+    /// Refer to [`tickets`] for more information.
+    ///
+    /// # Errors
+    ///
+    /// Refer to the documentation for the `ticketsf` method of the backend
+    /// implementation in use for why this can error.
+    ///
+    /// [`tickets`]: #method.tickets
+    #[cfg(feature = "futures")]
+    #[inline]
+    pub fn ticketsf(
+        &mut self,
+    ) -> Box<Future<Item = Option<u32>, Error = V::Error>> {
+        self.backend.ticketsf()
     }
 
     /// Inserts a default holder for an ID, returning the existing holder if one
-    /// exists.
+    /// existed.
     ///
     /// Unlike [`take`], this does not mutate the holder (i.e. taking a ticket).
     ///
@@ -261,58 +325,60 @@ impl<T: Eq + Hash, U: Clone + 'static> Bucket<T, U> {
     /// Insert a default holder for the id `77`:
     ///
     /// ```rust
+    /// # extern crate rl;
+    /// #
+    /// # use std::error::Error;
+    /// #
+    /// # fn try_main() -> Result<(), Box<Error>> {
+    /// #
     /// use rl::Bucket;
     /// use std::time::Duration;
     ///
     /// let mut bucket = Bucket::new(Duration::from_secs(1), 1);
-    /// bucket.generate(77u64);
+    /// bucket.generate(77u64)?;
     ///
-    /// assert!(bucket.has(&77u64));
+    /// assert!(bucket.has(&77u64)?);
+    /// #
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     try_main().unwrap();
+    /// # }
     /// ```
     ///
     /// [`take`]: #method.take
+    #[cfg_attr(feature = "futures", cold)]
     #[inline]
-    pub fn generate(&mut self, holder_id: T) -> Option<Holder<U>> {
+    pub fn generate(
+        &mut self,
+        holder_id: T,
+    ) -> Result<Option<Holder<U>>, V::Error> {
         let state = self.state.clone();
 
-        self.insert(holder_id, Holder::new(None, 0, state))
+        self.backend.insert(holder_id, Holder::new(None, 0, state))
     }
 
-    /// Returns an immutable reference to a holder from the holders map by key,
-    /// if one exists.
+    /// Returns a Future which inserts a default holder for an ID, resolving to
+    /// the existing holder if one existed.
     ///
-    /// This is a shortcut for going through the [`holders`] getter and
-    /// then keying that.
+    /// Refer to [`generate`] for more information.
     ///
-    /// # Examples
+    /// # Errors
     ///
-    /// ```rust
-    /// use rl::Bucket;
-    /// use std::time::Duration;
+    /// Refer to the documentation for the `generatef` method of the backend
+    /// implementation in use for why this can error.
     ///
-    /// let id = 1u64;
-    ///
-    /// let mut bucket = Bucket::new(Duration::from_secs(1), 5);
-    /// bucket.take(&id);
-    ///
-    /// assert!(bucket.holder(&&id).is_some());
-    /// ```
-    ///
-    /// [`holders`]: #method.holders
+    /// [`generate`]: #method.generate
+    #[cfg(feature = "futures")]
     #[inline]
-    pub fn holder(&self, holder_id: &T) -> Option<&Holder<U>> {
-        self.holders.get(holder_id)
-    }
+    pub fn generatef(
+        &mut self,
+        holder_id: T,
+    ) -> Box<Future<Item = Option<Holder<U>>, Error = V::Error>> {
+        let state = self.state.clone();
 
-    /// Returns a mutable reference to a holder from the holders map by key, if
-    /// one exists.
-    ///
-    /// Refer to [`holder`] for more information.
-    ///
-    /// [`holder`]: #method.holder
-    #[inline]
-    pub fn holder_mut(&mut self, holder_id: &T) -> Option<&mut Holder<U>> {
-        self.holders.get_mut(holder_id)
+        self.backend.insertf(holder_id, Holder::new(None, 0, state))
     }
 
     /// Whether the bucket contains an instance for the holder.
@@ -323,19 +389,51 @@ impl<T: Eq + Hash, U: Clone + 'static> Bucket<T, U> {
     /// holder until a ticket is taken:
     ///
     /// ```rust
+    /// # extern crate rl;
+    /// #
+    /// # use std::error::Error;
+    /// #
+    /// # fn try_main() -> Result<(), Box<Error>> {
+    /// #
     /// use rl::Bucket;
     /// use std::time::Duration;
     ///
     /// let mut bucket = Bucket::new(Duration::from_secs(1), 1);
-    /// assert!(!bucket.has(&"an id"));
+    /// assert!(!bucket.has(&"an id")?);
     ///
     /// // Take a ticket for the ID and then assert that it _does_ exist.
-    /// bucket.take("an id");
-    /// assert!(bucket.has(&"an id"));
+    /// bucket.take("an id")?;
+    /// assert!(bucket.has(&"an id")?);
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// # }
     /// ```
+    #[cfg_attr(feature = "futures", cold)]
     #[inline]
-    pub fn has(&mut self, holder_id: &T) -> bool {
-        self.holders.contains_key(holder_id)
+    pub fn has(&mut self, holder_id: &T) -> Result<bool, V::Error> {
+        self.backend.has(holder_id)
+    }
+
+    /// Returns a Future which resolves to whether the backend has a holder with
+    /// the given ID.
+    ///
+    /// Refer to [`has`] for more information.
+    ///
+    /// # Errors
+    ///
+    /// Refer to the documentation for the `hasf` method of the backend
+    /// implementation in use for why this can error.
+    ///
+    /// [`has`]: #method.has
+    #[cfg(feature = "futures")]
+    #[inline]
+    pub fn hasf(
+        &mut self,
+        holder_id: &T,
+    ) -> Box<Future<Item = bool, Error = V::Error>> {
+        self.backend.hasf(holder_id)
     }
 
     /// Inserts an existing holder into the bucket.
@@ -345,17 +443,56 @@ impl<T: Eq + Hash, U: Clone + 'static> Bucket<T, U> {
     /// # Examples
     ///
     /// ```rust
+    /// # extern crate rl;
+    /// #
+    /// # use std::error::Error;
+    /// #
+    /// # fn try_main() -> Result<(), Box<Error>> {
+    /// #
     /// use rl::{Bucket, Holder};
     /// use std::time::Duration;
     ///
     /// let mut bucket = Bucket::new(Duration::from_secs(5), 1);
-    /// bucket.insert("an id", Holder::default());
+    /// bucket.insert("an id", Holder::default())?;
     ///
-    /// assert!(bucket.has(&"an id"));
+    /// assert!(bucket.has(&"an id")?);
+    /// #
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     try_main().unwrap();
+    /// # }
     /// ```
+    #[cfg_attr(feature = "futures", cold)]
     #[inline]
-    pub fn insert(&mut self, holder_id: T, holder: Holder<U>) -> Option<Holder<U>> {
-        self.holders.insert(holder_id, holder)
+    pub fn insert(
+        &mut self,
+        holder_id: T,
+        holder: Holder<U>,
+    ) -> Result<Option<Holder<U>>, V::Error> {
+        self.backend.insert(holder_id, holder)
+    }
+
+    /// Returns a Future which inserts an existing holder into the bucket and
+    /// resolves to the existing holder, if it existed.
+    ///
+    /// Refer to [`insert`] for more information.
+    ///
+    /// # Errors
+    ///
+    /// Refer to the documentation for the `insertf` method of the backend
+    /// implementation in use for why this can error.
+    ///
+    /// [`insert`]: #method.insert
+    #[cfg(feature = "futures")]
+    #[inline]
+    pub fn insertf(
+        &mut self,
+        holder_id: T,
+        holder: Holder<U>,
+    ) -> Box<Future<Item = Option<Holder<U>>, Error = V::Error>> {
+        self.backend.insertf(holder_id, holder)
     }
 
     /// Calculates the number of remaining tickets in a holder.
@@ -363,6 +500,12 @@ impl<T: Eq + Hash, U: Clone + 'static> Bucket<T, U> {
     /// # Examples
     ///
     /// ```rust
+    /// # extern crate rl;
+    /// #
+    /// # use std::error::Error;
+    /// #
+    /// # fn try_main() -> Result<(), Box<Error>> {
+    /// #
     /// use rl::Bucket;
     /// use std::time::Duration;
     ///
@@ -371,25 +514,46 @@ impl<T: Eq + Hash, U: Clone + 'static> Bucket<T, U> {
     /// let mut bucket = Bucket::new(Duration::from_secs(5), 5);
     /// // Assert that retrieving the number of remaining tickets for a
     /// // nonexistent holder will return None.
-    /// assert!(bucket.remaining(&id).is_none());
+    /// assert!(bucket.remaining(&id)?.is_none());
     ///
     /// // Assert that the bucket has 4 tickets remaining after taking a ticket.
-    /// bucket.take(id);
-    /// assert!(bucket.remaining(&id) == Some(4));
+    /// bucket.take(id)?;
+    /// assert!(bucket.remaining(&id).unwrap() == Some(4));
+    /// #
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     try_main().unwrap();
+    /// # }
     /// ```
+    #[cfg_attr(feature = "futures", cold)]
     #[inline]
-    pub fn remaining(&mut self, holder_id: &T) -> Option<u32> {
-        if self.has(holder_id) {
-            let tickets = self.tickets;
-            let refresh_time = self.refresh_time;
+    pub fn remaining(
+        &mut self,
+        holder_id: &T,
+    ) -> Result<Option<u32>, V::Error> {
+        self.backend.remaining(holder_id)
+    }
 
-            self
-                .holders
-                .get_mut(holder_id)
-                .map(|h| h.remaining(&tickets, &refresh_time))
-        } else {
-            None
-        }
+    /// Returns a Future which resolves to the number of remaining tickets for
+    /// a holder, if it exists.
+    ///
+    /// Refer to [`remaining`] for more information.
+    ///
+    /// # Errors
+    ///
+    /// Refer to the documentation for the `remainingf` method of the backend
+    /// implementation in use for why this can error.
+    ///
+    /// [`remaining`]: #method.remaining
+    #[cfg(feature = "futures")]
+    #[inline]
+    pub fn remainingf(
+        &mut self,
+        holder_id: &T,
+    ) -> Box<Future<Item = Option<u32>, Error = V::Error>> {
+        self.backend.remainingf(holder_id)
     }
 
     /// Attempts to remove a holder from the bucket, if one exists.
@@ -397,24 +561,62 @@ impl<T: Eq + Hash, U: Clone + 'static> Bucket<T, U> {
     /// # Examples
     ///
     /// ```rust
+    /// # extern crate rl;
+    /// #
+    /// # use std::error::Error;
+    /// #
+    /// # fn try_main() -> Result<(), Box<Error>> {
+    /// #
     /// use rl::Bucket;
     /// use std::time::Duration;
     ///
     /// let mut bucket = Bucket::new(Duration::from_secs(1), 5);
     ///
     /// // A holder identified by `"hello"` doesn't exist yet.
-    /// assert!(bucket.remove(&"hello").is_none());
+    /// assert!(bucket.remove(&"hello")?.is_none());
     ///
     /// // Make the previously mentioned bucket, then remove it.
     /// bucket.take("hello");
-    /// assert!(bucket.remove(&"hello").is_some());
+    /// assert!(bucket.remove(&"hello")?.is_some());
     ///
     /// // Verify it was removed:
-    /// assert!(bucket.remove(&"hello").is_none());
+    /// assert!(bucket.remove(&"hello")?.is_none());
+    /// #
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     try_main().unwrap();
+    /// # }
     /// ```
+    #[cfg_attr(feature = "futures", cold)]
     #[inline]
-    pub fn remove(&mut self, holder_id: &T) -> Option<Holder<U>> {
-        self.holders.remove(holder_id)
+    pub fn remove(
+        &mut self,
+        holder_id: &T,
+    ) -> Result<Option<Holder<U>>, V::Error> {
+        self.backend.remove(holder_id)
+    }
+
+
+    /// Returns a Future which attempts to remove a holder from the bucket, if
+    /// one exists.
+    ///
+    /// Refer to [`remove`] for more information.
+    ///
+    /// # Errors
+    ///
+    /// Refer to the documentation for the `remainingf` method of the backend
+    /// implementation in use for why this can error.
+    ///
+    /// [`remove`]: #method.remove
+    #[cfg(feature = "futures")]
+    #[inline]
+    pub fn removef(
+        &mut self,
+        holder_id: &T,
+    ) -> Box<Future<Item = Option<Holder<U>>, Error = V::Error>> {
+        self.backend.removef(holder_id)
     }
 
     /// Modifies the total number of tickets in the bucket.
@@ -427,22 +629,60 @@ impl<T: Eq + Hash, U: Clone + 'static> Bucket<T, U> {
     /// then decreasing the ticket count to 2:
     ///
     /// ```rust
+    /// # extern crate rl;
+    /// #
+    /// # use std::error::Error;
+    /// #
+    /// # fn try_main() -> Result<(), Box<Error>> {
+    /// #
     /// use rl::Bucket;
     /// use std::time::Duration;
     ///
     /// let mut bucket = Bucket::new(Duration::from_secs(1), 5);
     ///
     /// for _ in 0..3 {
-    ///     bucket.take("hi");
+    ///     bucket.take("hi")?;
     /// }
     ///
-    /// assert!(bucket.remaining(&"hi") == Some(2));
-    /// bucket.set_tickets(2);
-    /// assert!(bucket.remaining(&"hi") == Some(0));
+    /// assert!(bucket.remaining(&"hi")? == Some(2));
+    /// bucket.set_tickets(2)?;
+    /// assert!(bucket.remaining(&"hi")? == Some(0));
+    /// #
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     try_main().unwrap();
+    /// # }
     /// ```
+    #[cfg_attr(feature = "futures", cold)]
     #[inline]
-    pub fn set_tickets(&mut self, new_ticket_count: u32) {
-        self.tickets = new_ticket_count;
+    pub fn set_tickets(
+        &mut self,
+        new_ticket_count: u32,
+    ) -> Result<Option<u32>, V::Error> {
+        self.backend.set_tickets(new_ticket_count)
+    }
+
+
+    /// Returns a Future which modifies the total number of tickets in the
+    /// bucket.
+    ///
+    /// Refer to [`set_tickets`] for more information.
+    ///
+    /// # Errors
+    ///
+    /// Refer to the documentation for the `remainingf` method of the backend
+    /// implementation in use for why this can error.
+    ///
+    /// [`set_tickets`]: #method.set_tickets
+    #[cfg(feature = "futures")]
+    #[inline]
+    pub fn set_ticketsf(
+        &mut self,
+        new_ticket_count: u32,
+    ) -> Box<Future<Item = Option<u32>, Error = V::Error>> {
+        self.backend.set_ticketsf(new_ticket_count)
     }
 
     /// Takes a ticket from a holder, creating the holder if it doesn't exist.
@@ -453,13 +693,26 @@ impl<T: Eq + Hash, U: Clone + 'static> Bucket<T, U> {
     /// removed:
     ///
     /// ```rust
+    /// # extern crate rl;
+    /// #
+    /// # use std::error::Error;
+    /// #
+    /// # fn try_main() -> Result<(), Box<Error>> {
+    /// #
     /// use rl::Bucket;
     /// use std::time::Duration;
     ///
     /// let mut bucket = Bucket::new(Duration::from_secs(1), 2);
-    /// bucket.take("test");
+    /// bucket.take("test")?;
     ///
-    /// assert!(bucket.remaining(&"test") == Some(1));
+    /// assert!(bucket.remaining(&"test")? == Some(1));
+    /// #
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     try_main().unwrap();
+    /// # }
     /// ```
     ///
     /// # Warnings
@@ -473,10 +726,12 @@ impl<T: Eq + Hash, U: Clone + 'static> Bucket<T, U> {
     ///
     /// [`take_nb`]: #method.take_nb
     #[inline]
-    pub fn take(&mut self, holder_id: T) {
-        if let Some(duration) = self.take_nb(holder_id) {
+    pub fn take(&mut self, holder_id: T) -> Result<(), V::Error> {
+        if let Some(duration) = self.take_nb(holder_id)? {
             thread::sleep(duration)
         }
+
+        Ok(())
     }
 
     /// Attempts to take a ticket from a holder.
@@ -489,7 +744,7 @@ impl<T: Eq + Hash, U: Clone + 'static> Bucket<T, U> {
         &mut self,
         holder_id: T,
     ) -> Box<Future<Item = (), Error = ()>> {
-        match self.take_nb(holder_id) {
+        match self.take_nb(holder_id).unwrap() {
             Some(dur) => {
                 let done = Timer::default().sleep(dur)
                     .map_err(|_| ());
@@ -510,146 +765,161 @@ impl<T: Eq + Hash, U: Clone + 'static> Bucket<T, U> {
     /// duration to wait is returned:
     ///
     /// ```rust
+    /// # extern crate rl;
+    /// #
+    /// # use std::error::Error;
+    /// #
+    /// # fn try_main() -> Result<(), Box<Error>> {
+    /// #
     /// use rl::Bucket;
     /// use std::time::Duration;
     ///
     /// let mut bucket = Bucket::new(Duration::from_secs(5), 1);
-    /// bucket.take("test");
+    /// bucket.take("test")?;
     ///
     /// // Assert that the holder's tickets are all used and that there is some
     /// // time until they replenish.
-    /// assert!(bucket.take_nb("test").is_some());
+    /// assert!(bucket.take_nb("test")?.is_some());
+    /// #
+    /// #     Ok(())
+    /// # }
+    /// #
+    /// # fn main() {
+    /// #     try_main().unwrap();
+    /// # }
     /// ```
     #[inline]
-    pub fn take_nb(&mut self, holder_id: T) -> Option<Duration> {
-        let state = self.state.clone();
+    pub fn take_nb(&mut self, holder_id: T) -> Result<Option<Duration>, V::Error> {
+        self.backend.take(holder_id, &self.state)
+    }
 
-        self.holders
-            .entry(holder_id)
-            .or_insert_with(|| {
-                Holder::new(None, 0, state)
-            })
-            .take(&self.tickets, &self.refresh_time)
+    /// Returns a Future which attempts to take a ticket from a holder,
+    /// returning the duration until the holder refreshes if all tickets have
+    /// been used.
+    ///
+    /// Refer to [`take_nb`] for more information.
+    ///
+    /// # Errors
+    ///
+    /// Refer to the documentation for the `remainingf` method of the backend
+    /// implementation in use for why this can error.
+    ///
+    /// [`take_nb`]: #method.take_nb
+    pub fn take_nbf(
+        &mut self,
+        holder_id: T,
+    ) -> Box<Future<Item = Option<Duration>, Error = V::Error>> {
+        self.backend.takef(holder_id, &self.state)
     }
 }
 
-impl<T: Eq + Hash> Deref for Bucket<T> {
-    type Target = HashMap<T, Holder>;
+impl<T: Eq + Hash, U: Clone, V: Backend<T, U>> Deref for Bucket<T, U, V> {
+    type Target = V;
 
     fn deref(&self) -> &Self::Target {
-        &self.holders
+        &self.backend
     }
 }
 
-impl<T: Eq + Hash> DerefMut for Bucket<T> {
-    fn deref_mut(&mut self) -> &mut HashMap<T, Holder> {
-        &mut self.holders
+impl<T: Eq + Hash, U: Clone, V: Backend<T, U>> DerefMut for Bucket<T, U, V> {
+    fn deref_mut(&mut self) -> &mut V {
+        &mut self.backend
     }
 }
 
 #[cfg(test)]
 mod test {
-    use std::time::{Duration, Instant};
+    use backend::InMemoryBackend;
+    use std::time::Duration;
     use {Bucket, Holder};
 
-    fn bucket() -> Bucket<i32> {
+    fn bucket() -> Bucket<i32, (), InMemoryBackend<i32, ()>> {
         Bucket::new(Duration::from_secs(2), 1)
     }
 
     #[test]
     fn test_generate() {
         let mut bucket = bucket();
-        assert!(!bucket.has(&1));
+        assert!(!bucket.has(&1).unwrap());
 
-        bucket.generate(1);
-        assert!(bucket.has(&1));
+        bucket.generate(1).unwrap();
+        assert!(bucket.has(&1).unwrap());
     }
 
     #[test]
     fn test_has() {
         let mut bucket = bucket();
-        assert!(!bucket.has(&1));
+        assert!(!bucket.has(&1).unwrap());
 
-        bucket.generate(1);
-        assert!(bucket.has(&1));
+        bucket.generate(1).unwrap();
+        assert!(bucket.has(&1).unwrap());
 
-        bucket.remove(&1);
-        assert!(!bucket.has(&1));
+        bucket.remove(&1).unwrap();
+        assert!(!bucket.has(&1).unwrap());
     }
 
     #[test]
     fn test_insert() {
         let mut bucket = bucket();
-        assert!(!bucket.has(&1));
-        bucket.insert(1, Holder::default());
-        assert!(bucket.has(&1));
-        bucket.take(1);
+        assert!(!bucket.has(&1).unwrap());
+        bucket.insert(1, Holder::default()).unwrap();
+        assert!(bucket.has(&1).unwrap());
+        bucket.take(1).unwrap();
 
         let value = bucket.insert(1, Holder::default());
-        assert_eq!(*value.unwrap().tickets_taken(), 1);
+        assert_eq!(*value.unwrap().unwrap().tickets_taken(), 1);
     }
 
     #[test]
     fn test_remaining() {
         let mut bucket = bucket();
-        assert!(bucket.remaining(&1).is_none());
-        bucket.generate(1);
-        assert_eq!(bucket.remaining(&1), Some(1));
+        assert!(bucket.remaining(&1).unwrap().is_none());
+        bucket.generate(1).unwrap();
+        assert_eq!(bucket.remaining(&1).unwrap(), Some(1));
 
-        bucket.take(1);
-        assert_eq!(bucket.remaining(&1), Some(0));
+        bucket.take(1).unwrap();
+        assert_eq!(bucket.remaining(&1).unwrap(), Some(0));
     }
 
     #[test]
     fn test_remove() {
         let mut bucket = bucket();
-        assert!(bucket.remove(&1).is_none());
-        bucket.generate(1);
-        assert!(bucket.has(&1));
-        assert!(bucket.remove(&1).is_some());
-        assert!(!bucket.has(&1));
+        assert!(bucket.remove(&1).unwrap().is_none());
+        bucket.generate(1).unwrap();
+        assert!(bucket.has(&1).unwrap());
+        assert!(bucket.remove(&1).unwrap().is_some());
+        assert!(!bucket.has(&1).unwrap());
     }
 
     #[test]
     fn test_set_tickets() {
         let mut bucket = bucket();
-        bucket.generate(1);
-        assert_eq!(bucket.remaining(&1), Some(1));
-        bucket.take(1);
-        bucket.set_tickets(3);
-        assert_eq!(bucket.remaining(&1), Some(2));
+        bucket.generate(1).unwrap();
+        assert_eq!(bucket.remaining(&1).unwrap(), Some(1));
+        bucket.take(1).unwrap();
+        bucket.set_tickets(3).unwrap();
+        assert_eq!(bucket.remaining(&1).unwrap(), Some(2));
     }
 
     #[test]
     fn test_take() {
         let mut bucket = bucket();
-        bucket.take(1);
-        assert_eq!(bucket.remaining(&1), Some(0));
+        bucket.take(1).unwrap();
+        assert_eq!(bucket.remaining(&1).unwrap(), Some(0));
     }
 
     #[test]
     fn test_take_nb() {
         let mut bucket = bucket();
-        assert!(bucket.take_nb(1).is_none());
-        assert!(bucket.take_nb(1).is_some());
-    }
-
-    #[test]
-    fn test_behaviour_blocking() {
-        let mut bucket = bucket();
-        bucket.take(1);
-
-        let before = Instant::now();
-        bucket.take(1);
-        assert!(before.elapsed() > Duration::from_secs(1));
-        assert!(before.elapsed() < Duration::from_secs(3));
+        assert!(bucket.take_nb(1).unwrap().is_none());
+        assert!(bucket.take_nb(1).unwrap().is_some());
     }
 
     #[test]
     fn test_nonblocking_duration() {
         let mut bucket = bucket();
-        bucket.take(1);
-        let duration = bucket.take_nb(1).expect("holder ticketed?");
+        bucket.take(1).unwrap();
+        let duration = bucket.take_nb(1).unwrap().expect("holder ticketed?");
         assert!(duration < Duration::from_secs(2));
         assert!(duration > Duration::from_secs(1));
     }
@@ -657,9 +927,9 @@ mod test {
     #[test]
     fn test_no_state_holders() {
         let mut bucket = Bucket::new(Duration::from_secs(1), 2);
-        bucket.take(0u64);
+        bucket.take(0u64).unwrap();
         let holder = bucket.remove(&0).expect("no holder");
-        assert_eq!(*holder.state(), ());
+        assert_eq!(*holder.unwrap().state(), ());
     }
 
     #[test]
@@ -669,11 +939,11 @@ mod test {
             bar: u64,
         }
 
-        let mut bucket = Bucket::stateful(Duration::from_secs(1), 2, State {
+        let mut bucket = Bucket::stateful(InMemoryBackend::new(Duration::from_secs(1), 2), State {
             bar: 0,
         });
-        bucket.take(0u64);
+        bucket.take(0u64).unwrap();
         let holder = bucket.remove(&0).expect("no holder");
-        assert_eq!(holder.state().bar, 0);
+        assert_eq!(holder.unwrap().state().bar, 0);
     }
 }
