@@ -75,7 +75,7 @@ impl<T: Eq + Hash, U: Clone + 'static> InMemoryBackend<T, U> {
     /// Creates a new in memory backend with a provided refresh time and
     /// maximum number of holder tickets.
     pub fn new(refresh_time: Duration, tickets: u32) -> Self {
-        Self {
+        InMemoryBackend {
             holders: HashMap::new(),
             refresh_time: refresh_time,
             tickets: tickets,
@@ -113,18 +113,6 @@ impl<T: Eq + Hash, U: Clone + 'static> InMemoryBackend<T, U> {
     ///
     /// This is a shortcut for going through the [`holders`] getter and
     /// then keying that.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use rl::Bucket;
-    /// use std::time::Duration;
-    ///
-    /// let mut bucket = Bucket::new(Duration::from_secs(1), 5);
-    /// bucket.take(&1u64);
-    ///
-    /// assert!(bucket.holder(&&1).is_some());
-    /// ```
     ///
     /// [`holders`]: #method.holders
     #[inline]
