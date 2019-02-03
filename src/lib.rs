@@ -65,8 +65,8 @@
 //!
 //! [`Bucket`]: struct.Bucket.html
 //! [`Holder`]: struct.Holder.html
-//! [ci]: https://travis-ci.org/zeyla/rl.rs
-//! [ci-badge]: https://img.shields.io/travis/zeyla/rl.svg?style=flat-square
+//! [ci]: https://travis-ci.org/rusty-crates/rl.rs
+//! [ci-badge]: https://img.shields.io/travis/rusty-crates/rl.svg?style=flat-square
 //! [docs]: https://docs.rs/rl
 //! [docs-badge]: https://img.shields.io/badge/docs-online-5023dd.svg?style=flat-square
 //! [license]: https://opensource.org/licenses/ISC
