@@ -1,6 +1,6 @@
 //! Implementation and error definitions for the in process memory backend.
 
-use super::Backend;
+use crate::Holder;
 use std::{
     collections::HashMap,
     error::Error as StdError,
@@ -9,7 +9,7 @@ use std::{
     mem,
     time::Duration,
 };
-use Holder;
+use super::Backend;
 
 /// Error enum for [`InMemoryBackend`].
 ///
@@ -198,12 +198,11 @@ impl<T: Eq + Hash, U: Clone + 'static> Backend<T, U> for InMemoryBackend<T, U> {
 
 #[cfg(test)]
 mod tests {
-    use std::time::Duration;
-    use super::{
-        super::Backend,
-        InMemoryBackend,
+    use crate::{
+        backend::{Backend, InMemoryBackend},
+        Holder,
     };
-    use Holder;
+    use std::time::Duration;
 
     type Impl = InMemoryBackend<u64, ()>;
 

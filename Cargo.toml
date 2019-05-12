@@ -2,6 +2,7 @@
 authors = ["Zeyla Hellyer <hi@zeyla.me>"]
 description = "Simple and effective ratelimiting implementation"
 documentation = "https://docs.rs/rl"
+edition = "2018"
 homepage = "https://github.com/rusty-crates/rl"
 license = "ISC"
 name = "rl"

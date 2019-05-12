@@ -31,12 +31,12 @@ pub mod in_memory;
 
 pub use self::in_memory::InMemoryBackend;
 
+use crate::Holder;
 use std::{
     fmt::Debug,
     hash::Hash,
     time::Duration,
 };
-use Holder;
 
 #[cfg(feature = "futures")]
 use futures::{Future, future};

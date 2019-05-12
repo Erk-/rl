@@ -1,4 +1,7 @@
-use backend::{Backend, InMemoryBackend};
+use crate::{
+    backend::{Backend, InMemoryBackend},
+    Holder,
+};
 use std::{
     hash::Hash,
     marker::PhantomData,
@@ -6,7 +9,6 @@ use std::{
     time::Duration,
     thread,
 };
-use Holder;
 
 #[cfg(feature = "futures")]
 use futures::future::{self, Future};
@@ -831,9 +833,12 @@ impl<T: Eq + Hash, U: Clone, V: Backend<T, U>> DerefMut for Bucket<T, U, V> {
 
 #[cfg(test)]
 mod test {
-    use backend::InMemoryBackend;
+    use crate::{
+        backend::InMemoryBackend,
+        Bucket,
+        Holder,
+    };
     use std::time::Duration;
-    use {Bucket, Holder};
 
     fn bucket() -> Bucket<i32, (), InMemoryBackend<i32, ()>> {
         Bucket::new(Duration::from_secs(2), 1)
