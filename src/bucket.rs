@@ -146,9 +146,9 @@ impl<T: Eq + Hash, U: Clone + 'static, V: Backend<T, U>> Bucket<T, U, V> {
     /// [`Holder`]: struct.Holder.html
     pub fn stateful(backend: V, state: U) -> Self {
         Bucket {
-            backend: backend,
+            backend,
             marker: PhantomData,
-            state: state,
+            state,
             _nonexhaustive: (),
         }
     }
@@ -518,7 +518,7 @@ impl<T: Eq + Hash, U: Clone + 'static, V: Backend<T, U>> Bucket<T, U, V> {
     ///
     /// // Assert that the bucket has 4 tickets remaining after taking a ticket.
     /// bucket.take(id)?;
-    /// assert!(bucket.remaining(&id).unwrap() == Some(4));
+    /// assert_eq!(bucket.remaining(&id).unwrap(), Some(4));
     /// #
     /// #     Ok(())
     /// # }
@@ -644,9 +644,9 @@ impl<T: Eq + Hash, U: Clone + 'static, V: Backend<T, U>> Bucket<T, U, V> {
     ///     bucket.take("hi")?;
     /// }
     ///
-    /// assert!(bucket.remaining(&"hi")? == Some(2));
+    /// assert_eq!(bucket.remaining(&"hi")?, Some(2));
     /// bucket.set_tickets(2)?;
-    /// assert!(bucket.remaining(&"hi")? == Some(0));
+    /// assert_eq!(bucket.remaining(&"hi")?, Some(0));
     /// #
     /// #     Ok(())
     /// # }
@@ -705,7 +705,7 @@ impl<T: Eq + Hash, U: Clone + 'static, V: Backend<T, U>> Bucket<T, U, V> {
     /// let mut bucket = Bucket::new(Duration::from_secs(1), 2);
     /// bucket.take("test")?;
     ///
-    /// assert!(bucket.remaining(&"test")? == Some(1));
+    /// assert_eq!(bucket.remaining(&"test")?, Some(1));
     /// #
     /// #     Ok(())
     /// # }

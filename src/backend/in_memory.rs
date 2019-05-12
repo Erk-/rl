@@ -77,8 +77,8 @@ impl<T: Eq + Hash, U: Clone + 'static> InMemoryBackend<T, U> {
     pub fn new(refresh_time: Duration, tickets: u32) -> Self {
         InMemoryBackend {
             holders: HashMap::new(),
-            refresh_time: refresh_time,
-            tickets: tickets,
+            refresh_time,
+            tickets,
         }
     }
 

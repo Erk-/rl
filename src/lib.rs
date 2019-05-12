@@ -44,12 +44,12 @@
 //! // existing, and then take a ticket. Since the limit is 2, the holder now
 //! // has 1 ticket remaining.
 //! bucket.take(id);
-//! assert!(bucket.remaining(&id)? == Some(1));
+//! assert_eq!(bucket.remaining(&id)?, Some(1));
 //!
 //! // Take another, leaving it with 0 since 1000ms has not passed yet and the
 //! // holder would not replenish yet.
 //! bucket.take(id);
-//! assert!(bucket.remaining(&id)? == Some(0));
+//! assert_eq!(bucket.remaining(&id)?, Some(0));
 //!
 //! // Try to take another ticket in a nonblocking fashion, asserting that the
 //! // current thread _would_ block if we didn't explicitly use a nonblocking
@@ -73,7 +73,6 @@
 //! [license-badge]: https://img.shields.io/badge/license-ISC-blue.svg?style=flat-square
 //! [rust badge]: https://img.shields.io/badge/rust-1.15+-93450a.svg?style=flat-square
 //! [rust link]: https://blog.rust-lang.org/2017/02/02/Rust-1.15.html
-#![cfg_attr(feature = "cargo-clippy", allow(redundant_field_names))]
 #![deny(missing_docs)]
 
 #[cfg(feature = "futures")]

@@ -45,9 +45,9 @@ impl<T: Clone + 'static> Holder<T> {
         state: T,
     ) -> Holder<T> {
         Holder {
-            started_at: started_at,
-            state: state,
-            tickets_taken: tickets_taken,
+            started_at,
+            state,
+            tickets_taken,
             _nonexhaustive: (),
         }
     }
@@ -132,7 +132,7 @@ impl<T: Clone + 'static> Holder<T> {
     /// let duration = Duration::from_secs(2);
     /// holder.take(max, &duration);
     ///
-    /// assert!(holder.remaining(max, &duration) == 4);
+    /// assert_eq!(holder.remaining(max, &duration), 4);
     /// ```
     ///
     /// [`Bucket::remaining`]: struct.Bucket.html#method.remaining
@@ -173,10 +173,10 @@ impl<T: Clone + 'static> Holder<T> {
     /// let mut holder: Holder<()> = Holder::default();
     ///
     /// // Assert that no tickets have been taken.
-    /// assert!(*holder.tickets_taken() == 0);
+    /// assert_eq!(*holder.tickets_taken(), 0);
     ///
     /// holder.take(max, &duration);
-    /// assert!(*holder.tickets_taken() == 1);
+    /// assert_eq!(*holder.tickets_taken(), 1);
     /// ```
     ///
     /// [`Bucket::take`]: struct.Bucket.html#method.take
