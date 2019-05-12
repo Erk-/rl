@@ -31,9 +31,11 @@ pub mod in_memory;
 
 pub use self::in_memory::InMemoryBackend;
 
-use std::fmt::Debug;
-use std::hash::Hash;
-use std::time::Duration;
+use std::{
+    fmt::Debug,
+    hash::Hash,
+    time::Duration,
+};
 use Holder;
 
 #[cfg(feature = "futures")]

@@ -1,12 +1,14 @@
 //! Implementation and error definitions for the in process memory backend.
 
 use super::Backend;
-use std::collections::HashMap;
-use std::error::Error as StdError;
-use std::fmt::{Display, Formatter, Result as FmtResult};
-use std::hash::Hash;
-use std::mem;
-use std::time::Duration;
+use std::{
+    collections::HashMap,
+    error::Error as StdError,
+    fmt::{Display, Formatter, Result as FmtResult},
+    hash::Hash,
+    mem,
+    time::Duration,
+};
 use Holder;
 
 /// Error enum for [`InMemoryBackend`].
@@ -197,8 +199,10 @@ impl<T: Eq + Hash, U: Clone + 'static> Backend<T, U> for InMemoryBackend<T, U> {
 #[cfg(test)]
 mod tests {
     use std::time::Duration;
-    use super::InMemoryBackend;
-    use super::super::Backend;
+    use super::{
+        super::Backend,
+        InMemoryBackend,
+    };
     use Holder;
 
     type Impl = InMemoryBackend<u64, ()>;

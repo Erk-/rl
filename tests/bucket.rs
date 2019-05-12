@@ -1,7 +1,9 @@
 extern crate rl;
 
-use rl::backend::InMemoryBackend;
-use rl::Bucket;
+use rl::{
+    backend::InMemoryBackend,
+    Bucket,
+};
 use std::time::{Duration, Instant};
 
 fn bucket() -> Bucket<i32, (), InMemoryBackend<i32, ()>> {

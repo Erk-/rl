@@ -1,8 +1,10 @@
 extern crate rl;
 
 use rl::Holder;
-use std::thread;
-use std::time::Duration;
+use std::{
+    thread,
+    time::Duration,
+};
 
 #[ignore]
 #[test]

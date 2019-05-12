@@ -1,9 +1,11 @@
 use backend::{Backend, InMemoryBackend};
-use std::hash::Hash;
-use std::marker::PhantomData;
-use std::ops::{Deref, DerefMut};
-use std::time::Duration;
-use std::thread;
+use std::{
+    hash::Hash,
+    marker::PhantomData,
+    ops::{Deref, DerefMut},
+    time::Duration,
+    thread,
+};
 use Holder;
 
 #[cfg(feature = "futures")]
@@ -116,8 +118,10 @@ impl<T: Eq + Hash, U: Clone + 'static, V: Backend<T, U>> Bucket<T, U, V> {
     /// #
     /// # fn try_main() -> Result<(), Box<Error>> {
     /// #
-    /// use rl::backend::InMemoryBackend;
-    /// use rl::Bucket;
+    /// use rl::{
+    ///     backend::InMemoryBackend,
+    ///     Bucket,
+    /// };
     /// use std::time::Duration;
     ///
     /// #[derive(Clone)]
@@ -241,8 +245,10 @@ impl<T: Eq + Hash, U: Clone + 'static, V: Backend<T, U>> Bucket<T, U, V> {
     /// #
     /// # fn try_main() -> Result<(), Box<Error>> {
     /// #
-    /// use rl::backend::InMemoryBackend;
-    /// use rl::Bucket;
+    /// use rl::{
+    ///     backend::InMemoryBackend,
+    ///     Bucket,
+    /// };
     /// use std::time::Duration;
     ///
     /// #[derive(Clone)]
