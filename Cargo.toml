@@ -17,10 +17,9 @@ status = "actively-developed"
 optional = true
 version = "0.1"
 
-[dependencies.tokio-timer]
+[dependencies.futures-timer]
 optional = true
-version = "0.2"
+version = "0.1"
 
 [features]
-default = ["future-support"]
-future-support = ["futures", "tokio-timer"]
+future-support = ["futures", "futures-timer"]

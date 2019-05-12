@@ -8,10 +8,8 @@ use Holder;
 
 #[cfg(feature = "futures")]
 use futures::future::{self, Future};
-#[cfg(feature = "futures")]
-use std::time::Instant;
-#[cfg(feature = "tokio-timer")]
-use tokio_timer::Delay;
+#[cfg(feature = "futures-timer")]
+use futures_timer::Delay;
 
 /// A synchronous instance defining the information for ticket holders, such as
 /// the amount of time between a first ticket request and replenishment and the
@@ -747,11 +745,7 @@ impl<T: Eq + Hash, U: Clone + 'static, V: Backend<T, U>> Bucket<T, U, V> {
         holder_id: T,
     ) -> Box<Future<Item = (), Error = ()>> {
         match self.take_nb(holder_id).unwrap() {
-            Some(dur) => {
-                let done = Delay::new(Instant::now() + dur).map_err(|_| ());
-
-                Box::new(done)
-            },
+            Some(dur) => Box::new(Delay::new(dur).map_err(|_| ())),
             None => Box::new(future::ok(())),
         }
     }
@@ -806,6 +800,7 @@ impl<T: Eq + Hash, U: Clone + 'static, V: Backend<T, U>> Bucket<T, U, V> {
     /// implementation in use for why this can error.
     ///
     /// [`take_nb`]: #method.take_nb
+    #[cfg(feature = "futures")]
     pub fn take_nbf(
         &mut self,
         holder_id: T,

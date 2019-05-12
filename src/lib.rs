@@ -78,8 +78,8 @@
 
 #[cfg(feature = "futures")]
 extern crate futures;
-#[cfg(feature = "tokio-timer")]
-extern crate tokio_timer;
+#[cfg(feature = "futures-timer")]
+extern crate futures_timer;
 
 pub mod backend;
 

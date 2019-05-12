@@ -31,14 +31,13 @@ pub mod in_memory;
 
 pub use self::in_memory::InMemoryBackend;
 
-use futures::future;
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::time::Duration;
 use Holder;
 
 #[cfg(feature = "futures")]
-use futures::Future;
+use futures::{Future, future};
 
 /// Backend trait which can be implemented and given to [`Bucket::stateful`].
 ///
@@ -62,6 +61,7 @@ pub trait Backend<T: Eq + Hash, U: Clone + 'static = ()> {
     /// Refer to [`Bucket::refresh_timef`] for more information.
     ///
     /// [`Bucket::refresh_timef`]: struct.Bucket.html#method.refresh_timef
+    #[cfg(feature = "futures")]
     #[inline]
     fn refresh_timef(&mut self) -> Box<Future<Item = Option<Duration>, Error = Self::Error>> {
         Box::new(future::result(self.refresh_time()))
