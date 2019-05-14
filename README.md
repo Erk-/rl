@@ -64,5 +64,5 @@ ISC.
 [docs-badge]: https://img.shields.io/badge/docs-online-5023dd.svg?style=flat-square
 [license]: https://opensource.org/licenses/ISC
 [license-badge]: https://img.shields.io/badge/license-ISC-blue.svg?style=flat-square
-[rust badge]: https://img.shields.io/badge/rust-1.31+-93450a.svg?style=flat-square
-[rust link]: https://blog.rust-lang.org/2018/12/06/Rust-1.31-and-rust-2018.html
+[rust badge]: https://img.shields.io/badge/rust-1.32+-93450a.svg?style=flat-square
+[rust link]: https://blog.rust-lang.org/2019/01/17/Rust-1.32.0.html
