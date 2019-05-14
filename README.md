@@ -7,7 +7,7 @@ the bucket's settings for use with multiple unique clients.
 
 ### Installation
 
-This library requires at least Rust 1.15.0.
+This library requires at least Rust 1.32.0.
 
 Add the following to your `Cargo.toml` file:
 
